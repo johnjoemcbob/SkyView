@@ -83,12 +83,12 @@ end
 
 function SkyView:CreatePlayer(ply) --create player func
 	file.Write("skyview/players/"..ply.FileID..".txt", " ")
-end 
+end
 
 function SkyView:ShowFirstScreen(ply)
 	net.Start("skyview_firstplayerscreen")
 	net.Send(ply)
-end 
+end
 
 function SkyView:ReflectVector( vec, normal, bounce )
 return bounce * ( -2 * ( vec:Dot( normal ) ) * normal + vec );
@@ -120,16 +120,26 @@ function GM:PlayerInitialSpawn(ply)
 		SkyView:ShowFirstScreen(ply) --show them the first screen
 		SkyView:CreatePlayer(ply) --make their player
 	end
-end 
+end
 
 function GM:PlayerSpawn(ply)
-	ply.PropCD = CurTime()+0.2 
-end 
+	ply.PropCD = CurTime()+0.2
+
+	-- Ensure gravity is enabled on the player
+	ply:SetGravity( 0.5 )
+end
+
+function GM:PostPlayerDeath( ply )
+	-- Remove and grapples when the player dies
+	RemoveGrapple( ply )
+end
 
 function GM:KeyPress(ply, key)
 	if ply:Alive() then
-		print(ply.PropCD)
-		if key == IN_ATTACK and !ply.ShieldMade then
+		if key == IN_USE then
+			AddGrapple( ply )
+		end
+		if key == IN_ATTACK and !ply.ShieldMade and !ply.Grapple then
 			if ply.PropCD == 0 or ply.PropCD > 0 and CurTime() >= ply.PropCD then
 				local prop = ents.Create("prop_physics")
 				local pos = ply:GetPos()
@@ -145,26 +155,34 @@ function GM:KeyPress(ply, key)
 						if ent.MeShield then 
 							ent:EmitSound(SkyView:RandomShieldSound())
 							obj:SetVelocity(vel)
-						end 
+						end
 					elseif ent:IsWorld() or string.find(ent:GetClass(), "func") then 
 						obj:SetVelocity(vel)
-					end 
-				end )
+					end
+				end)
 
 				if SkyView.Config.FirstPerson then
-					obj:SetVelocity(ply:GetAimVector()*2000) 
-				elseif !SkyView.Config.FirstPerson then 
-					obj:SetVelocity(ply:GetForward()*2000)
+					obj:SetVelocity( ply:GetAimVector() * 2000 + ply:GetVelocity() ) 
+				else
+					obj:SetVelocity( ply:GetForward() * 2000 + ply:GetVelocity() )
 					--Why we did the thing above? Because when we're in the sky view, we can't aim where we shoot.
 				end
 				timer.Simple(SkyView.Config.RemovePropTime, function()
 					if IsValid(prop) then prop:Remove() end
-				end )
+				end)
 				ply.PropCD = CurTime()+SkyView.Config.PropSpawnCoolDown
-			end 
+			end
 		end
 	end
-end 
+end
+
+function GM:KeyRelease( ply, key )
+	if ply:Alive() then
+		if key == IN_USE then
+			RemoveGrapple( ply )
+		end
+	end
+end
 
 function GM:Think()
 	for k,v in pairs(player.GetAll()) do 
@@ -182,34 +200,79 @@ function GM:Think()
 					shield.MeShield = true 
 					v.Shield = shield 
 				end
-			elseif !v:KeyDown(IN_ATTACK2) and v.ShieldMade then 
+			elseif !v:KeyDown(IN_ATTACK2) and v.ShieldMade then
 				v.Shield:Remove()
 				v.ShieldMade = false 
-			end 
+			end
 			if v.ShieldMade and v.Shield != nil then
 				v.Shield:SetPos(v:EyePos()+v:GetForward()*50)
 				v.Shield:SetAngles(v:GetAngles())
 			end
-			if v:KeyPressed(IN_JUMP) and !v:IsOnGround() and !v.InAir then 
+			if v:KeyPressed(IN_JUMP) and !v:IsOnGround() and !v.InAir then
 				v.InAir = true 
-			end 
-			if v:KeyPressed(IN_JUMP) and v.InAir and !v.Jumped then 
+			end
+			-- If on the grapple hook & reeling in, jumping can launch you into the air
+			if (
+				v:KeyPressed( IN_JUMP ) and
+				v.Grapple and v.GrappleHook and IsValid( v.GrappleHook ) and
+				( v.GrappleHook.GrappleAttached ~= false )
+			) then
+				-- Jump
+			 	v:SetVelocity( Vector( 0, 0, 400 ) )
+				-- Increase the velocity of the attached item (if it's an entity)
+				if ( type( v.GrappleHook.GrappleAttached ) == "Entity" ) then
+					v.GrappleHook.GrappleAttached:GetPhysicsObject():SetVelocity(
+						v.GrappleHook.GrappleAttached:GetPhysicsObject():GetVelocity() / v.GrappleHook.InvertSpeedMultiplier
+					)
+				end
+				-- Remove the hook
+				RemoveGrapple( v )
+			elseif v:KeyPressed(IN_JUMP) and v.InAir and !v.Jumped then
 				if v.JumpTime == 0 then 
 					v.JumpTime = CurTime()+SkyView.Config.DoubleJumpTime
-				 end 
-				 if CurTime() >= v.JumpTime and v.InAir then 
+				 end
+				 if CurTime() >= v.JumpTime and v.InAir then
 				 	v.Jumped = true 
 				 	v:SetVelocity(Vector(0,0,200))
 				 	v.JumpTime = 0
-				 end 
-			end 
+				 end
+			end
 			if v:OnGround() then 
 				v.InAir = false 
 				v.Jumped = false 
 				v.JumpTime = 0
 			end
 		end
-	end 
-end 
+	end
+end
 
-//
+function AddGrapple( ply )
+	-- For some reason the old hook is still around, delete
+	RemoveGrapple( ply )
+
+	-- Create the grapple
+	ply.Grapple = true
+
+	-- Create the grapple hook physics object, which will fly forward of the player
+	ply.GrappleHook = ents.Create( "sky_grapple" )
+		ply.GrappleHook:SetPos( ply:EyePos() )
+		ply.GrappleHook.Direction = ply:EyeAngles():Forward()
+		ply.GrappleHook.Owner = ply
+	ply.GrappleHook:Spawn()
+
+	-- Disable gravity on the player
+	ply:SetGravity( 0 )
+end
+
+function RemoveGrapple( ply )
+	-- Delete the grapple
+	ply.Grapple = false
+
+	if ( ply.GrappleHook and IsValid( ply.GrappleHook ) ) then
+		ply.GrappleHook:Remove()
+		ply.GrappleHook = nil
+	end
+
+	-- Enable gravity on the player
+	ply:SetGravity( 0.5 )
+end
