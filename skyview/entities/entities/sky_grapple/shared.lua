@@ -20,18 +20,45 @@ ENT.Direction = Vector( 0, 0, 0 )
 ENT.GrappleAttached = false
 
 -- The speed at which to shoot out the hook
-ENT.CastSpeed = 1500 * 5009
+ENT.CastSpeed = 1500 * 500
 
 -- The speed at which to reel in the player
 ENT.ReelSpeed = 1500 * 100
+
+-- The speed at which the hook will stop reeling in the player, if it can't solve them to it's exact position
+ENT.MinReelSpeed = 100
 
 -- The multiplier on the inverted object speed for when grappling against players/entities
 ENT.InvertSpeedMultiplier = 0.001
 
 -- The distance at which to stop reeling in
-ENT.MinDistance = 100
+ENT.MinDistance = 50
+
+-- The distance from start to end last frame, for stopping the player near the entity & not going past it
+ENT.LastDistance = nil
+
+-- The direction the hook was moving in last frame, for stopping the retracting from overshooting
+ENT.LastDirection = nil
 
 local RopeMaterial = Material( "cable/cable" )
+
+sound.Add( {
+	name = "RopeSound",
+	channel = CHAN_STATIC,
+	volume = 1.0,
+	level = 80,
+	pitch = { 95, 110 },
+	sound = "weapons/tripwire/ropeshoot.wav"
+} )
+
+sound.Add( {
+	name = "ReelSound",
+	channel = CHAN_STATIC,
+	volume = 0.5,
+	level = 80,
+	pitch = { 40, 80 },
+	sound = "weapons/357/357_spin1.wav"
+} )
 
 function ENT:Initialize()
 	-- Initialize shared properties
@@ -45,7 +72,7 @@ function ENT:Initialize()
 		self:SetMoveType( MOVETYPE_VPHYSICS )
 		if ( self:GetPhysicsObject() and IsValid( self:GetPhysicsObject() ) ) then
 			self:GetPhysicsObject():EnableGravity( false )
-			self:GetPhysicsObject():SetVelocity( self.Direction * self.CastSpeed )
+			self:GetPhysicsObject():SetVelocity( ( self.Direction * self.CastSpeed ) + self.Owner:GetVelocity() )
 		end
 
 		-- Replicate the owner to clients
@@ -66,6 +93,19 @@ function ENT:Initialize()
 
 		-- Rotate the hook to face the target
 		self:SetAngles( self.Direction:Angle() + Angle( -90, 0, 0 ) )
+
+		-- Emit the firing sound
+		self:EmitSound( "weapons/crossbow/fire1.wav" )
+
+		-- Play the fire and reel in sound loop
+		self.Owner:EmitSound( "RopeSound" )
+
+		timer.Create( "ReelSound", 0.3, 0, function()
+			if ( self.Reeling ) then
+				self.Owner:StopSound( "ReelSound" )
+				self.Owner:EmitSound( "ReelSound" )
+			end
+		end )
 	end
 end
 
@@ -74,7 +114,38 @@ function ENT:SetupDataTables()
 end
 
 function ENT:Think()
-	if ( IsValid( self.Owner ) and ( self.GrappleAttached ~= false ) ) then
+	-- Retract the hook back towards the player (autoremoved on a timer in HookRemove)
+	if ( self.Retracting ) then
+		local direction = ( self.Owner:GetPos() - self:GetPos() ):GetNormalized()
+		if ( not self.LastDirection ) then
+			self.LastDirection = direction
+		end
+
+		-- Get the angle between the current direction of retracting and the one used last frame
+		local dot = direction:Dot( self.LastDirection )
+		local angle = math.deg( math.acos( dot ) )
+
+		-- Remove if it's close to the player, or the direction has changed
+		if (
+			( self:GetPos():Distance( self.Owner:GetPos() ) < 200 ) or
+			( angle > 45 )
+		) then
+			self:Remove()
+			return
+		end
+
+		-- Move towards the player
+		local phys = self:GetPhysicsObject()
+		if ( phys and IsValid( phys ) ) then
+			if ( ( not self.LastDirection ) or ( self.LastDirection == direction ) ) then
+				phys:SetVelocity( direction * self.ReelSpeed )
+			end
+		end
+
+		-- Store last direction to stop overshooting
+		self.LastDirection = direction
+	-- Move towards attached object
+	elseif ( IsValid( self.Owner ) and ( self.GrappleAttached ~= false ) ) then
 		local grappletype = type( self.GrappleAttached )
 		local direction, distance
 		-- Moving object
@@ -83,30 +154,49 @@ function ENT:Think()
 				distance = self.GrappleAttached:GetPos():Distance( self.Owner:GetPos() )
 
 				-- In player/entity case, move both towards each other
-				if ( distance < self.MinDistance ) then
-					direction = Vector( 0, 0, 0 )
-				end
-				local velocity = direction:GetNormalized() * self.GrappleAttached:GetPhysicsObject():GetMass() * FrameTime() * -self.ReelSpeed * self.InvertSpeedMultiplier
-				self.GrappleAttached:SetVelocity( velocity )
-				-- Entity has a physics object, set velocity on that too
-				if ( grappletype == "Entity" ) then
-					self.GrappleAttached:GetPhysicsObject():SetVelocity( velocity )
-				end
+				local phys = self.GrappleAttached:GetPhysicsObject()
+				if ( phys and IsValid( phys ) ) then
+					if ( self.LastDistance and ( distance > self.LastDistance ) ) then
+						distance = 0
+					end
 
-				-- Ensure the player is not stuck to the ground
-				self.GrappleAttached:SetGroundEntity( nil )
+					if ( distance < self.MinDistance ) then
+						direction = Vector( 0, 0, 0 )
+					end
+
+					local velocity = direction:GetNormalized() * phys:GetMass() * FrameTime() * -self.ReelSpeed * self.InvertSpeedMultiplier
+					self.GrappleAttached:SetVelocity( velocity )
+					-- Entity has a physics object, set velocity on that too
+					if ( grappletype == "Entity" ) then
+						phys:SetVelocity( velocity )
+					end
+
+					-- Ensure the player is not stuck to the ground
+					self.GrappleAttached:SetGroundEntity( nil )
+				end
 			-- Static world position
 			else
 				direction = self.GrappleAttached - self.Owner:GetPos()
 				distance = self.GrappleAttached:Distance( self.Owner:GetPos() )
 			end
-			if ( distance < self.MinDistance ) then
+			-- Reduce the reeling in speed until it can either solve to the hook position or is too small a speed to notice
+			if ( self.LastDistance and ( distance > self.LastDistance ) ) then
+				self.ReelSpeed = self.ReelSpeed / 4
+			end
+			if ( ( distance < self.MinDistance ) or ( self.ReelSpeed < self.MinReelSpeed ) ) then
 				direction = Vector( 0, 0, 0 )
+				self.Owner:SetMoveType( MOVETYPE_NONE )
+
+				-- Stop the reel in sound effect
+				self.Reeling = false
 			end
 		self.Owner:SetVelocity( direction:GetNormalized() * FrameTime() * self.ReelSpeed - self.Owner:GetVelocity() )
 
 		-- Ensure the player is not stuck to the ground
 		self.Owner:SetGroundEntity( nil )
+
+		-- Store this distance for next frame
+		self.LastDistance = distance
 	end
 end
 
@@ -159,6 +249,9 @@ function ENT:Attach( trace )
 	-- Flag as attached to something
 	self.GrappleAttached = trace.HitPos
 
+	-- Disable gravity on the player
+	self.Owner:SetGravity( 0 )
+
 	if ( IsValid( trace.Entity ) ) then
 		-- Parent the hook to the entity/world
 		self:SetParent( trace.Entity )
@@ -166,6 +259,41 @@ function ENT:Attach( trace )
 		-- Flag as attached to an object
 		self.GrappleAttached = trace.Entity
 	end
+
+	-- Stop the reel in sound effect
+	self.Owner:StopSound( "RopeSound" )
+
+	-- Emit the firing sound from the entity and from the player so they can always hear it
+	self:EmitSound( "weapons/crossbow/bolt_skewer1.wav" )
+	sound.Play( "weapons/crossbow/bolt_skewer1.wav", self.Owner:GetPos(), 50 )
+
+	-- Emit the reel in sound effect
+	self.Reeling = true
+end
+
+function ENT:HookRemove()
+	-- Move hook back towards the player
+	local phys = self:GetPhysicsObject()
+	if ( ( not phys ) or ( not IsValid( phys ) ) ) then
+		self:PhysicsInitSphere( 5, "default" )
+		self:PhysWake()
+	end
+	self:SetSolid( SOLID_BBOX )
+	self:SetParent( nil )
+	self.DisableAttach = true
+	self.Retracting = true
+	self.GrappleAttached = false
+	self.Reeling = true
+
+	-- Stop the reel in sound effect
+	self.Owner:StopSound( "ReelSound" )
+
+	-- Timer to remove the hook shortly after the animation
+	timer.Simple( 2, function()
+		if ( self and IsValid( self ) ) then
+			self:Remove()
+		end
+	end )
 end
 
 function ENT:OnRemove()
@@ -174,6 +302,10 @@ function ENT:OnRemove()
 		for k, hookmodel in pairs( self.VisualModels ) do
 			hookmodel:Remove()
 		end
+
+		-- Stop the shoot out sound effect
+		self.Owner:StopSound( "RopeSound" )
+		timer.Destroy( "ReelSound" )
 	end
 end
 

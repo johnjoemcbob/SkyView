@@ -124,14 +124,29 @@ end
 
 function GM:PlayerSpawn(ply)
 	ply.PropCD = CurTime()+0.2
-
-	-- Ensure gravity is enabled on the player
-	ply:SetGravity( 0.5 )
 end
 
 function GM:PostPlayerDeath( ply )
 	-- Remove and grapples when the player dies
 	RemoveGrapple( ply )
+
+	-- If any players are attached to this player, attach them instead to the death ragdoll
+	for k, otherply in pairs( player.GetAll() ) do
+		-- This player was attached to the now dead player
+		if (
+			otherply.Grapple and otherply.GrappleHook and IsValid( otherply.GrappleHook ) and
+			otherply.GrappleHook.GrappleAttached and ( otherply.GrappleHook.GrappleAttached == ply )
+		) then
+			-- Attach instead to their ragdoll
+			local ragdoll = ply:GetRagdollEntity()
+			local data = {}
+				data.Entity = ragdoll
+				data.HitPos = ragdoll:GetPos()
+				data.HitNormal = otherply.GrappleHook:GetAngles():Up()
+				data.MatType = MAT_GRASS
+			otherply.GrappleHook:Attach( data )
+		end
+	end
 end
 
 -- Death stats!
@@ -273,9 +288,12 @@ function GM:Think()
 			 	v:SetVelocity( Vector( 0, 0, 400 ) )
 				-- Increase the velocity of the attached item (if it's an entity)
 				if ( type( v.GrappleHook.GrappleAttached ) == "Entity" ) then
-					v.GrappleHook.GrappleAttached:GetPhysicsObject():SetVelocity(
-						v.GrappleHook.GrappleAttached:GetPhysicsObject():GetVelocity() / v.GrappleHook.InvertSpeedMultiplier
-					)
+					local phys = v.GrappleHook.GrappleAttached:GetPhysicsObject()
+					if ( phys and IsValid( phys ) ) then
+						phys:SetVelocity(
+							phys:GetVelocity() / v.GrappleHook.InvertSpeedMultiplier
+						)
+					end
 				end
 				-- Remove the hook
 				RemoveGrapple( v )
@@ -298,6 +316,14 @@ function GM:Think()
 	end
 end
 
+function GM:GetFallDamage( ply, speed )
+	-- Don't take damage if still reeling in
+	if ( ply.Grapple and IsValid( ply.GrappleHook ) ) then
+		return 0
+	end
+	return 10
+end
+
 function AddGrapple( ply )
 	-- For some reason the old hook is still around, delete
 	RemoveGrapple( ply )
@@ -311,9 +337,6 @@ function AddGrapple( ply )
 		ply.GrappleHook.Direction = ply:EyeAngles():Forward()
 		ply.GrappleHook.Owner = ply
 	ply.GrappleHook:Spawn()
-
-	-- Disable gravity on the player
-	ply:SetGravity( 0 )
 end
 
 function RemoveGrapple( ply )
@@ -321,10 +344,11 @@ function RemoveGrapple( ply )
 	ply.Grapple = false
 
 	if ( ply.GrappleHook and IsValid( ply.GrappleHook ) ) then
-		ply.GrappleHook:Remove()
-		ply.GrappleHook = nil
+		-- Entity defined function to play a grapple retract animation before removal
+		ply.GrappleHook:HookRemove()
 	end
 
 	-- Enable gravity on the player
 	ply:SetGravity( 0.5 )
+	ply:SetMoveType( MOVETYPE_WALK )
 end
