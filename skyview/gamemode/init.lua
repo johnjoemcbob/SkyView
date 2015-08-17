@@ -134,6 +134,65 @@ function GM:PostPlayerDeath( ply )
 	RemoveGrapple( ply )
 end
 
+-- Death stats!
+function GM:PlayerDeath( ply, inflictor, attacker )
+	if( inflictor:GetClass() == "sky_physprop" ) then
+		if( inflictor.ThrownBy != nil and IsValid( inflictor.ThrownBy ) ) then
+			attacker = inflictor.ThrownBy
+			if( attacker == ply ) then
+				-- Suicide by Prop + 1
+				
+				-- Check if they grappled themselves a deadly object
+				if ( inflictor.LastGrappledBy == ply ) then
+					PrintMessage( HUD_PRINTTALK, ply:Name() .. " reeled in a big one." )
+					
+				-- Check  bounce timer on prop for rebound suicide.
+				elseif (inflictor.RecentlyBounced > 0 and inflictor.TimesBounced > 2 ) then
+					PrintMessage( HUD_PRINTTALK, ply:Name() .. " got a nasty, bouncy, surprise." )
+					
+					
+				else
+					-- Somehow walked in front of it.
+					PrintMessage( HUD_PRINTTALK, ply:Name() .. " couldn't dodge themselves." )
+				end
+				
+				
+				
+			else
+				-- Someone else threw it
+				-- Check grapple on prop for grapple kill.
+				if( inflictor.LastGrappledBy == attacker ) then
+					PrintMessage( HUD_PRINTTALK, attacker:Name() .. " whiplashed " .. ply:Name() .. "." ) 
+					
+				-- Player grappled the attackers prop towards them
+				elseif( inflictor.LastGrappledBy == ply ) then
+					PrintMessage( HUD_PRINTTALK, ply:Name() .. " helped themselves to " .. attacker:Name() .. "'s props. ")
+				
+				-- Check bounce timer on prop for rebound kill.
+				elseif( inflictor.RecentlyBounced > 0  and inflictor.TimesBounced > 2 ) then
+					PrintMessage( HUD_PRINTTALK, attacker:Name() .. " played squash with " .. ply:Name() .. "." )
+					
+				else
+					-- Normal kill.
+					PrintMessage( HUD_PRINTTALK, attacker:Name() .. " ground " .. ply:Name() .. " into a paste." )
+				end
+			end
+						
+		end		
+		
+		-- Check for multikill
+		if(inflictor.PlayersKilled > 0) then
+			PrintMessage( HUD_PRINTTALK, "MULTI KILL!" )
+		end
+		
+		
+		-- This prop has killed people. O:
+		inflictor.PlayersKilled = inflictor.PlayersKilled + 1
+	end
+
+
+end
+
 function GM:KeyPress(ply, key)
 	if ply:Alive() then
 		if key == IN_USE then
@@ -141,35 +200,28 @@ function GM:KeyPress(ply, key)
 		end
 		if key == IN_ATTACK and !ply.ShieldMade and !ply.Grapple then
 			if ply.PropCD == 0 or ply.PropCD > 0 and CurTime() >= ply.PropCD then
-				local prop = ents.Create("prop_physics")
+				local prop = ents.Create("sky_physprop")
 				local pos = ply:GetPos()
 				local forward = ply:GetForward()
-				prop:SetPos(ply:EyePos() + ply:GetVelocity()*0.1 + forward*60)
-				prop:SetModel(table.Random(PropModels))
-				prop:Spawn()
-				local obj = prop:GetPhysicsObject()
-				prop:AddCallback("PhysicsCollide", function(prop, data)
-					local ent = data.HitEntity 
-					local vel = SkyView:ReflectVector(data.OurOldVelocity, data.HitNormal, SkyView.Config.ReflectNum)
-					if !ent:IsWorld() and !string.find(ent:GetClass(), "func") then 
-						if ent.MeShield then 
-							ent:EmitSound(SkyView:RandomShieldSound())
-							obj:SetVelocity(vel)
-						end
-					elseif ent:IsWorld() or string.find(ent:GetClass(), "func") then 
-						obj:SetVelocity(vel)
-					end
-				end)
-
+				local throwPos = ply:EyePos() + ply:GetVelocity()*0.1 + forward*60
+				local throwVelocity = nil
+				
 				if SkyView.Config.FirstPerson then
-					obj:SetVelocity( ply:GetAimVector() * 2000 + ply:GetVelocity() ) 
+					throwVelocity = ( ply:GetAimVector() * 2000 + ply:GetVelocity() )
 				else
-					obj:SetVelocity( ply:GetForward() * 2000 + ply:GetVelocity() )
+					throwVelocity = ( ply:GetForward() * 2000 + ply:GetVelocity() )
 					--Why we did the thing above? Because when we're in the sky view, we can't aim where we shoot.
 				end
+				
+				prop:Spawn()
+				
+				-- Throw the prop, setting its owner
+				prop:Throw( throwPos, throwVelocity, ply )
+				
 				timer.Simple(SkyView.Config.RemovePropTime, function()
 					if IsValid(prop) then prop:Remove() end
 				end)
+				
 				ply.PropCD = CurTime()+SkyView.Config.PropSpawnCoolDown
 			end
 		end
