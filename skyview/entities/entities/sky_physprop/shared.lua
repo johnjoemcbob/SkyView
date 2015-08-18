@@ -19,6 +19,8 @@ ENT.SamePropsHit = 0
 ENT.ThrownBy = nil
 ENT.LastGrappledBy = nil
 ENT.RecentlyBounced = 0
+ENT.JustThrown = 0
+ENT.Owner = nil
 
 -- Prop Models Table
 local PropModels =
@@ -58,6 +60,7 @@ function ENT:Initialize()
 		self:SetModel(table.Random(PropModels))
 		self:PhysicsInit( SOLID_VPHYSICS )	
 		self:PhysWake()
+		self:SetCustomCollisionCheck( true )
 	end
 
 
@@ -70,7 +73,13 @@ function ENT:Think()
 	if(self.RecentlyBounced < 0) then
 		self.RecentlyBounced = 0
 	end
-end
+	
+	-- Tick down just-thrown timer
+	self.JustThrown = self.JustThrown - 100 * FrameTime()
+	if(self.JustThrown < 0) then 
+		self.JustThrown = 0
+	end
+end 
 
 function ENT:ReflectVector( vec, normal, bounce )
 	return bounce * ( -2 * ( vec:Dot( normal ) ) * normal + vec )
@@ -116,6 +125,7 @@ function ENT:OnRemove()
 		print("Times Grappled: " .. self.TimesGrappled)
 		print("Times Collided With A Prop: " .. self.OtherPropsHit)
 		print("Times Collided With Same Prop: " .. self.SamePropsHit)
+		print(self.JustThrown)
 		print("====================")
 	end
 end
@@ -126,4 +136,5 @@ function ENT:Throw( from, velocity, owner )
 	if( owner != nil and IsValid(owner)) then
 		self.ThrownBy = owner
 	end
+	self.JustThrown = 0.5
 end
