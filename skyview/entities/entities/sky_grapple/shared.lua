@@ -63,10 +63,12 @@ sound.Add( {
 function ENT:Initialize()
 	-- Initialize shared properties
 	self:DrawShadow( false )
+	self:SetModel( "models/Combine_Helicopter/helicopter_bomb01.mdl" )
+	self:SetModelScale( 0.1, 0 )
 	self:SetSolid( SOLID_BBOX )
 	self:SetCustomCollisionCheck( true )
 
-	if SERVER then
+	if ( SERVER ) then
 		-- Physics enabled, gravity disabled
 		self:PhysicsInitSphere( 5, "default" )
 		self:SetMoveType( MOVETYPE_VPHYSICS )
@@ -84,8 +86,8 @@ function ENT:Initialize()
 			local hookmodel = ents.Create( "prop_dynamic" )
 				hookmodel:SetModel( "models/props_junk/meathook001a.mdl" )
 				hookmodel:SetAngles( Angle( 0, 90 * hook, 90 ) )
-				hookmodel:SetPos( self:GetPos() + ( self:GetAngles():Right() * -5 ) )
-				hookmodel:SetModelScale( 0.5, 0 )
+				hookmodel:SetPos( self:GetPos() )
+				hookmodel:SetModelScale( 0.25, 0 )
 			hookmodel:Spawn()
 			hookmodel:SetParent( self )
 			table.insert( self.VisualModels, hookmodel )
@@ -102,8 +104,10 @@ function ENT:Initialize()
 
 		timer.Create( "ReelSound", 0.3, 0, function()
 			if ( self.Reeling ) then
-				self.Owner:StopSound( "ReelSound" )
-				self.Owner:EmitSound( "ReelSound" )
+				if ( self.Owner and IsValid( self.Owner ) ) then
+					self.Owner:StopSound( "ReelSound" )
+					self.Owner:EmitSound( "ReelSound" )
+				end
 			end
 		end )
 	end
@@ -114,6 +118,13 @@ function ENT:SetupDataTables()
 end
 
 function ENT:Think()
+	if ( ( not self.Owner ) or ( not IsValid( self.Owner ) ) ) then return end
+
+	-- If it's in the water then retract
+	if ( self:WaterLevel() > 0 ) then
+		self:HookRemove()
+	end
+
 	-- Retract the hook back towards the player (autoremoved on a timer in HookRemove)
 	if ( self.Retracting ) then
 		local direction = ( self.Owner:GetPos() - self:GetPos() ):GetNormalized()
@@ -150,6 +161,12 @@ function ENT:Think()
 		local direction, distance
 		-- Moving object
 			if ( ( grappletype == "Player" ) or ( grappletype == "Entity" ) ) then
+				-- Remove the grapple from the player if it is dead
+				if ( ( grappletype == "Player" ) and ( not self.GrappleAttached:Alive() ) ) then
+					self:HookRemove()
+					return
+				end
+
 				direction = self.GrappleAttached:GetPos() - self.Owner:GetPos()
 				distance = self.GrappleAttached:GetPos():Distance( self.Owner:GetPos() )
 
@@ -157,18 +174,19 @@ function ENT:Think()
 				local phys = self.GrappleAttached:GetPhysicsObject()
 				if ( phys and IsValid( phys ) ) then
 					if ( self.LastDistance and ( distance > self.LastDistance ) ) then
-						distance = 0
+						--distance = 0
 					end
 
 					if ( distance < self.MinDistance ) then
 						direction = Vector( 0, 0, 0 )
 					end
 
-					local velocity = direction:GetNormalized() * phys:GetMass() * FrameTime() * -self.ReelSpeed * self.InvertSpeedMultiplier
-					self.GrappleAttached:SetVelocity( velocity )
+					local velocity = direction:GetNormalized() * FrameTime() * -self.ReelSpeed
 					-- Entity has a physics object, set velocity on that too
 					if ( grappletype == "Entity" ) then
 						phys:SetVelocity( velocity )
+					else
+						self.GrappleAttached:SetVelocity( velocity )
 					end
 
 					-- Ensure the player is not stuck to the ground
@@ -180,17 +198,35 @@ function ENT:Think()
 				distance = self.GrappleAttached:Distance( self.Owner:GetPos() )
 			end
 			-- Reduce the reeling in speed until it can either solve to the hook position or is too small a speed to notice
-			if ( self.LastDistance and ( distance > self.LastDistance ) ) then
-				self.ReelSpeed = self.ReelSpeed / 4
+			if ( self.LastDistance and ( distance > self.LastDistance ) and ( grappletype == "Vector" ) ) then
+				--self.ReelSpeed = self.ReelSpeed / 4
 			end
 			if ( ( distance < self.MinDistance ) or ( self.ReelSpeed < self.MinReelSpeed ) ) then
 				direction = Vector( 0, 0, 0 )
-				self.Owner:SetMoveType( MOVETYPE_NONE )
+				-- World connection, stop moving
+				if ( grappletype == "Vector" ) then
+					self.Owner:SetMoveType( MOVETYPE_NONE )
+				end
 
 				-- Stop the reel in sound effect
 				self.Reeling = false
+			else
+				-- Start the reel in sound effect
+				self.Reeling = true
 			end
-		self.Owner:SetVelocity( direction:GetNormalized() * FrameTime() * self.ReelSpeed - self.Owner:GetVelocity() )
+		-- Crouching changes to reel in mode, if the player is near a surface
+		local trace = util.TraceLine( {
+			start = self.Owner:GetPos(),
+			endpos = self.Owner:GetPos() - Vector( 0, 0, 5 ),
+			filter = function( ent )
+				if ( ent == self.Owner ) then
+					return true
+				end
+			end
+		} )
+		if ( ( not self.Owner:KeyDown( IN_DUCK ) ) or ( not trace.Hit ) ) then
+			self.Owner:SetVelocity( direction:GetNormalized() * FrameTime() * self.ReelSpeed - self.Owner:GetVelocity() )
+		end
 
 		-- Ensure the player is not stuck to the ground
 		self.Owner:SetGroundEntity( nil )
@@ -225,6 +261,9 @@ end
 function ENT:Attach( trace )
 	-- Flagged as disabled
 	if ( self.DisableAttach ) then return end
+	-- Not world, player or prop
+	if ( trace.Entity and ( trace.Entity:GetClass() ~= "player" ) and ( trace.Entity:GetClass() ~= "sky_physprop" ) and ( trace.Entity:GetClass() ~= "prop_physics" ) ) then return end
+
 	-- Don't attach to skyboxes
 	if ( trace.MatType == MAT_DEFAULT ) then
 		-- Disable ever being able to attach
@@ -286,7 +325,9 @@ function ENT:HookRemove()
 	self.Reeling = true
 
 	-- Stop the reel in sound effect
-	self.Owner:StopSound( "ReelSound" )
+	if ( self.Owner and IsValid( self.Owner ) ) then
+		self.Owner:StopSound( "ReelSound" )
+	end
 
 	-- Timer to remove the hook shortly after the animation
 	timer.Simple( 2, function()
@@ -304,18 +345,25 @@ function ENT:OnRemove()
 		end
 
 		-- Stop the shoot out sound effect
-		self.Owner:StopSound( "RopeSound" )
+		if ( self.Owner and IsValid( self.Owner ) ) then
+			self.Owner:StopSound( "RopeSound" )
+		end
 		timer.Destroy( "ReelSound" )
 	end
 end
 
 if ( CLIENT ) then
 	function ENT:Draw()
+		self:DrawModel()
+
+		local player = ents.GetByIndex( self:GetOwnerIndex() )
+		if ( ( not player ) or ( not IsValid( player ) ) ) then return end
+
 		-- Draw the grapple rope from the owning player to the entity position
 		render.SetMaterial( RopeMaterial )
 		render.DrawBeam(
 			self:GetPos(),
-			ents.GetByIndex( self:GetOwnerIndex() ):EyePos() - Vector( 0, 0, 10 ),
+			player:EyePos() - Vector( 0, 0, 10 ),
 			2, 
 			0, 1, 
 			Color( 255, 255, 255, 255 )

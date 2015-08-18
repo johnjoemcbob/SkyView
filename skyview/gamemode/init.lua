@@ -105,7 +105,8 @@ function GM:PlayerInitialSpawn(ply)
 	if SkyView.Config.FirstPerson then
     	ply:SetWalkSpeed(700)
         ply:SetRunSpeed(600)
-        ply:SetGravity(0.2)
+        ply:SetJumpPower(300)
+        ply:SetGravity(1.1)
        end
 	ply:SetModel(table.Random(Models))
 	ply.ShieldMade = false
@@ -303,7 +304,7 @@ function GM:Think()
 				 end
 				 if CurTime() >= v.JumpTime and v.InAir then
 				 	v.Jumped = true 
-				 	v:SetVelocity(Vector(0,0,200))
+				 	v:SetVelocity(Vector(0,0,v:GetJumpPower()))
 				 	v.JumpTime = 0
 				 end
 			end
@@ -322,6 +323,10 @@ function GM:GetFallDamage( ply, speed )
 		return 0
 	end
 	return 10
+end
+
+function GM:PlayerDisconnected( ply )
+	RemoveGrapple( ply )
 end
 
 function AddGrapple( ply )
@@ -349,6 +354,6 @@ function RemoveGrapple( ply )
 	end
 
 	-- Enable gravity on the player
-	ply:SetGravity( 0.5 )
+	ply:SetGravity( 1.1 )
 	ply:SetMoveType( MOVETYPE_WALK )
 end

@@ -123,7 +123,7 @@ end
 
 
 function GM:HUDShouldDraw(name)
-	if name == "CHudHealth" or name == "CHudCrosshair" then 
+	if name == "CHudHealth" then 
 		return false 
 	end 
 	return true 
