@@ -297,6 +297,10 @@ function ENT:Attach( trace )
 
 		-- Flag as attached to an object
 		self.GrappleAttached = trace.Entity
+		
+		if(trace.Entity:GetClass() == "sky_physprop") then
+			trace.Entity.LastGrappledBy = self.Owner
+		end
 	end
 
 	-- Stop the reel in sound effect

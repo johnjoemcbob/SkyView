@@ -16,11 +16,11 @@ ENT.PlayersKilled = 0
 ENT.TimesGrappled = 0
 ENT.OtherPropsHit = 0
 ENT.SamePropsHit = 0
-ENT.ThrownBy = nil
+--ENT.ThrownBy = nil
 ENT.LastGrappledBy = nil
 ENT.RecentlyBounced = 0
-ENT.JustThrown = 0
-ENT.Owner = nil
+--ENT.JustThrown = 0
+--ENT.Owner = nil
 
 -- Prop Models Table
 local PropModels =
@@ -60,24 +60,36 @@ function ENT:Initialize()
 		self:SetModel(table.Random(PropModels))
 		self:PhysicsInit( SOLID_VPHYSICS )	
 		self:PhysWake()
-		self:SetCustomCollisionCheck( true )
+		
 	end
 
+	self:SetCustomCollisionCheck( true )
+	
+end
 
+function ENT:SetupDataTables()
+	-- Thrown-By and Owner Vals
+	self:NetworkVar("Entity", 0, "ThrownBy")
+	self:NetworkVar("Entity", 1, "PropOwner")
+	-- JustThrown Value
+	self:NetworkVar("Float", 0, "JustThrown")
+	
 	
 end
 
 function ENT:Think()
-	-- Tick down recently bounced timer.
-	self.RecentlyBounced = self.RecentlyBounced - 1
-	if(self.RecentlyBounced < 0) then
-		self.RecentlyBounced = 0
-	end
-	
-	-- Tick down just-thrown timer
-	self.JustThrown = self.JustThrown - 100 * FrameTime()
-	if(self.JustThrown < 0) then 
-		self.JustThrown = 0
+	if( SERVER ) then 
+		-- Tick down recently bounced timer.
+		self.RecentlyBounced = self.RecentlyBounced - 1
+		if(self.RecentlyBounced < 0) then
+			self.RecentlyBounced = 0
+		end
+		
+		-- Tick down just-thrown timer
+		self:SetJustThrown(self:GetJustThrown() - 100 * FrameTime())
+		if(self:GetJustThrown() < 0) then 
+			self:SetJustThrown(0)
+		end	
 	end
 end 
 
@@ -118,23 +130,14 @@ function ENT:PhysicsCollide( colData, collider )
 end
 
 function ENT:OnRemove()
-	if ( SERVER ) then
-		print("==== MODEL DIED ====")
-		print("Times Bounced: " .. self.TimesBounced)
-		print("Players Killed: " .. self.PlayersKilled)
-		print("Times Grappled: " .. self.TimesGrappled)
-		print("Times Collided With A Prop: " .. self.OtherPropsHit)
-		print("Times Collided With Same Prop: " .. self.SamePropsHit)
-		print(self.JustThrown)
-		print("====================")
-	end
+
 end
 
 function ENT:Throw( from, velocity, owner )
 	self:SetPos( from )
 	self:GetPhysicsObject():SetVelocity( velocity )
 	if( owner != nil and IsValid(owner)) then
-		self.ThrownBy = owner
+		self:SetThrownBy(owner)
 	end
-	self.JustThrown = 0.5
+	self:SetJustThrown(1)
 end

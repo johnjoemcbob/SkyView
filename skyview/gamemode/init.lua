@@ -153,8 +153,8 @@ end
 -- Death stats!
 function GM:PlayerDeath( ply, inflictor, attacker )
 	if( inflictor:GetClass() == "sky_physprop" ) then
-		if( inflictor.ThrownBy != nil and IsValid( inflictor.ThrownBy ) ) then
-			attacker = inflictor.ThrownBy
+		if( inflictor:GetThrownBy() != nil and IsValid( inflictor:GetThrownBy() ) ) then
+			attacker = inflictor:GetThrownBy()
 			if( attacker == ply ) then
 				-- Suicide by Prop + 1
 				
@@ -182,7 +182,7 @@ function GM:PlayerDeath( ply, inflictor, attacker )
 					
 				-- Player grappled the attackers prop towards them
 				elseif( inflictor.LastGrappledBy == ply ) then
-					PrintMessage( HUD_PRINTTALK, ply:Name() .. " helped themselves to " .. attacker:Name() .. "'s props. ")
+					PrintMessage( HUD_PRINTTALK, ply:Name() .. " played " .. attacker:Name() .. "'s claw game and lost. ")
 				
 				-- Check bounce timer on prop for rebound kill.
 				elseif( inflictor.RecentlyBounced > 0  and inflictor.TimesBounced > 2 ) then
@@ -233,6 +233,7 @@ function GM:KeyPress(ply, key)
 				
 				-- Throw the prop, setting its owner
 				prop:Throw( throwPos, throwVelocity, ply )
+				prop:SetPropOwner(ply)
 				
 				timer.Simple(SkyView.Config.RemovePropTime, function()
 					if IsValid(prop) then prop:Remove() end
