@@ -144,6 +144,8 @@ function GM:PlayerSpawn(ply)
 	end	
 end
 
+
+
 function GM:PostPlayerDeath( ply )
 	-- Remove and grapples when the player dies
 	RemoveGrapple( ply )
@@ -413,4 +415,15 @@ function RemoveGrapple( ply )
 	-- Enable gravity on the player
 	ply:SetGravity( 1.1 )
 	ply:SetMoveType( MOVETYPE_WALK )
+end
+
+-- For powerups/buffs
+function GM:PlayerHasThisPowerup( ply, powerupnum )
+	for k, v in pairs(ply.Buffs) do
+		if(k == powerupnum) then
+			return true
+		end
+	end
+	
+	return false
 end

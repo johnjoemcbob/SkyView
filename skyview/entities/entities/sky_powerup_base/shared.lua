@@ -16,6 +16,7 @@ ENT.PowerupScale = 3
 ENT.PowerupPickupRadius = 30
 ENT.PowerupBuffNumber = 1
 
+
 function ENT:Initialize()
 	-- Set model
 	self:SetModel( self.PowerupModel )
@@ -51,7 +52,7 @@ function ENT:Think()
 	local nearbyEnts = ents.FindInSphere( self:GetPos(), self.PowerupPickupRadius )
 	for k, v in pairs(nearbyEnts) do
 		if( v:IsPlayer() and IsValid(v)) then
-			if ( !v.HasPowerup ) then 
+			if ( GAMEMODE:PlayerHasThisPowerup(v, self.PowerupBuffNumber) == false ) then 
 				v:AddBuff(self.PowerupBuffNumber) 
 				self:Remove()
 			end

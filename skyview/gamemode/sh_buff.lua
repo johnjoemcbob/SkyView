@@ -36,12 +36,15 @@ table.insert(
 		Icon = "icon16/lightning.png",
 		Time = 15,
 		Debuff = false,
+		
 		ThinkActivate = function( self, ply )
 			
 		end,
 		Init = function( self, ply )
 			GAMEMODE:SetPlayerSpeed(ply, 1800, 1700)
 			print( ply:Name() .. " IS GOING VERY FASTER ")
+			-- Play speedup noise
+			ply:EmitSound("weapons/physcannon/physcannon_charge.wav", 75, 160, 1, CHAN_AUTO)
 			ply.HasPowerup = true
 		end,
 		Think = function( self, ply )
@@ -50,6 +53,8 @@ table.insert(
 		Remove = function( self, ply )
 			GAMEMODE:SetPlayerSpeed(ply, 700, 600)
 			print( ply:Name() .. " has calmed down.")
+			-- Play slowdown noise
+			ply:EmitSound("npc/manhack/bat_away.wav", 75, 75, 1, CHAN_AUTO)
 			ply.HasPowerup = false
 		end
 	}
