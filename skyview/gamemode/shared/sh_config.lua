@@ -11,7 +11,7 @@ SkyView.Config.ReflectNum = 1 --Set how much it reflects
 --[[
 	The lower it is, the less crazy it is.
 --]]
-SkyView.Config.RemovePropTime = 2 --Set how quick it removes props after spawned in
+SkyView.Config.RemovePropTime = 5 --Set how quick it removes props after spawned in
 --[[
 	The thing with this is that the higher it is, the more lag your server will have.
 ]]--
@@ -22,4 +22,12 @@ SkyView.Config.DoubleJumpTime = 0.3 --Set how long the player can double jump af
 SkyView.Config.PropSpawnCoolDown = 0.5 --Set how long until a player can spawn another prop
 --[[
 	For more chaos, decrease this variable
+--]]
+SkyView.Config.StatTracking = true --Set whether or not the gamemode should track positions of player jumps, deaths, etc
+--[[
+	Turning this on may increase server lag
+--]]
+SkyView.Config.ShowHalos = true --Set whether or not the players should have halos
+--[[
+	
 --]]

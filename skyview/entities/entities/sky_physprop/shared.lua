@@ -60,7 +60,6 @@ function ENT:Initialize()
 		self:SetModel(table.Random(PropModels))
 		self:PhysicsInit( SOLID_VPHYSICS )	
 		self:PhysWake()
-		
 	end
 
 	self:SetCustomCollisionCheck( true )
@@ -104,13 +103,16 @@ function ENT:PhysicsCollide( colData, collider )
 		
 		local bounceVel = self:ReflectVector( colData.OurOldVelocity, colData.HitNormal, SkyView.Config.ReflectNum )
 		
-		if(!hitEnt:IsWorld() and !string.find(hitEnt:GetClass(), "func")) then 
-			if (hitEnt.MeShield) then
-				hitEnt:EmitSound(SkyView:RandomShieldSound())
-				self:GetPhysicsObject():SetVelocity(bounceVel)
+		local phys = self:GetPhysicsObject()
+		if ( phys and IsValid( phys ) ) then
+			if(!hitEnt:IsWorld() and !string.find(hitEnt:GetClass(), "func")) then 
+				if (hitEnt.MeShield) then
+					hitEnt:EmitSound(SkyView:RandomShieldSound())
+					phys:SetVelocity(bounceVel)
+				end
+			elseif(hitEnt:IsWorld() or string.find(hitEnt:GetClass(), "func")) then
+				phys:SetVelocity(bounceVel)
 			end
-		elseif(hitEnt:IsWorld() or string.find(hitEnt:GetClass(), "func")) then
-			self:GetPhysicsObject():SetVelocity(bounceVel)
 		end
 		
 		-- Stats	

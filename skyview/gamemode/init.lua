@@ -1,5 +1,7 @@
 AddCSLuaFile("shared.lua") --send to clients
 AddCSLuaFile("shared/sh_config.lua")
+AddCSLuaFile( "sh_stats.lua" )
+
 //make dirs to access later
 file.CreateDir("skyview")
 file.CreateDir("skyview/players")
@@ -13,6 +15,9 @@ util.AddNetworkString("skyview_firstplayerscreen")
 --Gamemode Includes
 include("shared/sh_config.lua") --load our config file
 include("shared.lua") --load shared.lua file
+include( "sh_stats.lua" )
+
+include( "sv_stats.lua" )
 //
 
 
@@ -102,10 +107,13 @@ end
 //Base Functions
 
 function GM:PlayerInitialSpawn(ply)
+	-- Found in sv_stats.lua
+	self:PlayerInitialSpawn_Stats( ply )
+
 	if SkyView.Config.FirstPerson then
     	ply:SetWalkSpeed(700)
         ply:SetRunSpeed(600)
-        ply:SetJumpPower(300)
+        ply:SetJumpPower(0)
         ply:SetGravity(1.1)
        end
 	ply:SetModel(table.Random(Models))
@@ -192,6 +200,7 @@ function GM:PlayerDeath( ply, inflictor, attacker )
 					-- Normal kill.
 					PrintMessage( HUD_PRINTTALK, attacker:Name() .. " ground " .. ply:Name() .. " into a paste." )
 				end
+				attacker:AddFrags( 1 )
 			end
 						
 		end		
@@ -213,22 +222,29 @@ function GM:KeyPress(ply, key)
 	if ply:Alive() then
 		if key == IN_USE then
 			AddGrapple( ply )
+			ply.InAir = true
+			ply.Jumped = true
 		end
 		if key == IN_ATTACK and !ply.ShieldMade and !ply.Grapple then
 			if ply.PropCD == 0 or ply.PropCD > 0 and CurTime() >= ply.PropCD then
 				local prop = ents.Create("sky_physprop")
-				local pos = ply:GetPos()
-				local forward = ply:GetForward()
-				local throwPos = ply:EyePos() + ply:GetVelocity()*0.1 + forward*60
-				local throwVelocity = nil
-				
-				if SkyView.Config.FirstPerson then
-					throwVelocity = ( ply:GetAimVector() * 2000 + ply:GetVelocity() )
-				else
-					throwVelocity = ( ply:GetForward() * 2000 + ply:GetVelocity() )
-					--Why we did the thing above? Because when we're in the sky view, we can't aim where we shoot.
-				end
-				
+					local pos = ply:GetPos()
+					local fireangle = ply:EyeAngles()
+						-- If the player is on the ground they cannot fire downwards, or they will harm themselves
+						if ( ply:IsOnGround() ) then
+							fireangle.p = math.Clamp( fireangle.p, -180, 0 )
+						end
+					local forward = fireangle:Forward()
+					local throwPos = ply:EyePos() + ( forward * 10 )
+					local throwVelocity = nil
+					
+					if SkyView.Config.FirstPerson then
+						throwVelocity = ( forward * 2000 + ply:GetVelocity() )
+					else
+						throwVelocity = ( ply:GetForward() * 2000 + ply:GetVelocity() )
+						--Why we did the thing above? Because when we're in the sky view, we can't aim where we shoot.
+					end
+					prop:SetAngles( fireangle )
 				prop:Spawn()
 				
 				-- Throw the prop, setting its owner
@@ -254,8 +270,11 @@ function GM:KeyRelease( ply, key )
 end
 
 function GM:Think()
+	self:Think_Stats()
+
 	for k,v in pairs(player.GetAll()) do 
 		if v:Alive() then
+			-- Shield
 			if v:KeyDown(IN_ATTACK2) then
 				if !v.ShieldMade then
 					v.ShieldMade = true 
@@ -277,17 +296,17 @@ function GM:Think()
 				v.Shield:SetPos(v:EyePos()+v:GetForward()*50)
 				v.Shield:SetAngles(v:GetAngles())
 			end
-			if v:KeyPressed(IN_JUMP) and !v:IsOnGround() and !v.InAir then
-				v.InAir = true 
-			end
+
 			-- If on the grapple hook & reeling in, jumping can launch you into the air
 			if (
-				v:KeyPressed( IN_JUMP ) and
+				v:KeyDown( IN_JUMP ) and
 				v.Grapple and v.GrappleHook and IsValid( v.GrappleHook ) and
 				( v.GrappleHook.GrappleAttached ~= false )
 			) then
 				-- Jump
 			 	v:SetVelocity( Vector( 0, 0, 400 ) )
+				GAMEMODE:EventFired( v, "PlayerGrappleJump" )
+
 				-- Increase the velocity of the attached item (if it's an entity)
 				if ( type( v.GrappleHook.GrappleAttached ) == "Entity" ) then
 					local phys = v.GrappleHook.GrappleAttached:GetPhysicsObject()
@@ -299,20 +318,39 @@ function GM:Think()
 				end
 				-- Remove the hook
 				RemoveGrapple( v )
-			elseif v:KeyPressed(IN_JUMP) and v.InAir and !v.Jumped then
+			elseif v:KeyDown(IN_JUMP) and v.InAir and !v.Jumped then
+				if CurTime() >= v.JumpTime then
+				 	v.Jumped = true 
+				 	v:SetVelocity(Vector(0,0,300))
+				 	v.JumpTime = 0
+					GAMEMODE:EventFired( v, "PlayerDoubleJump" )
+				end
+			elseif v:KeyDown(IN_JUMP) and v:IsOnGround() then
 				if v.JumpTime == 0 then 
 					v.JumpTime = CurTime()+SkyView.Config.DoubleJumpTime
-				 end
-				 if CurTime() >= v.JumpTime and v.InAir then
-				 	v.Jumped = true 
-				 	v:SetVelocity(Vector(0,0,v:GetJumpPower()))
-				 	v.JumpTime = 0
-				 end
-			end
-			if v:OnGround() then 
+				end
+				v:SetVelocity(Vector(0,0,300))
+				v.InAir = true
+				v.Jumped = false
+				GAMEMODE:EventFired( v, "PlayerJump" )
+			-- Set ability to normal/double jump if on ground and not grappling
+			elseif v:OnGround() and ( ( not v.Grapple ) or ( not v.GrappleHook ) or ( not IsValid( v.GrappleHook ) ) or ( not v.GrappleHook.GrappleAttached) ) then 
 				v.InAir = false 
 				v.Jumped = false 
 				v.JumpTime = 0
+			end
+
+			-- Pass over props
+			for _, prop in pairs( ents.FindInSphere( v:GetPos(), 200 ) ) do
+				-- Is a prop
+				if ( ( prop:GetClass() == "sky_physprop" ) or ( prop:GetClass() == "prop_physics" ) ) then
+					-- Is close on every axis, but under on the z
+					local horizontaldistance = v:GetPos():Distance( Vector( prop:GetPos().x, prop:GetPos().y, v:GetPos().z ) )
+					local verticaldistance = prop:GetPos().z - v:GetPos().z
+					if ( ( horizontaldistance < 200 ) and ( verticaldistance > -200 ) and ( verticaldistance < 0 ) ) then
+						GAMEMODE:EventFired( v, "TravelOverProp", prop )
+					end
+				end
 			end
 		end
 	end

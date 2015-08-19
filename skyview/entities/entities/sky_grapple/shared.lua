@@ -111,6 +111,11 @@ function ENT:Initialize()
 			end
 		end )
 	end
+
+	-- Fire the grapple fire event on the owning player
+	if ( SERVER ) then
+		GAMEMODE:EventFired( self.Owner, "GrappleHookFired" )
+	end
 end
 
 function ENT:SetupDataTables()
@@ -264,6 +269,11 @@ function ENT:Attach( trace )
 	-- Not world, player or prop
 	if ( trace.Entity and ( trace.Entity:GetClass() ~= "player" ) and ( trace.Entity:GetClass() ~= "sky_physprop" ) and ( trace.Entity:GetClass() ~= "prop_physics" ) ) then return end
 
+	-- Fire the attached event on the owning player
+	if ( SERVER ) then
+		GAMEMODE:EventFired( self.Owner, "GrappleHookAttached", trace )
+	end
+
 	-- Don't attach to skyboxes
 	if ( trace.MatType == MAT_DEFAULT ) then
 		-- Disable ever being able to attach
@@ -315,6 +325,9 @@ function ENT:Attach( trace )
 end
 
 function ENT:HookRemove()
+	-- Don't retract twice
+	if ( self.Retracting ) then return end
+
 	-- Move hook back towards the player
 	local phys = self:GetPhysicsObject()
 	if ( ( not phys ) or ( not IsValid( phys ) ) ) then
@@ -339,6 +352,11 @@ function ENT:HookRemove()
 			self:Remove()
 		end
 	end )
+
+	-- Fire the grapple retract event on the owning player
+	if ( SERVER ) then
+		GAMEMODE:EventFired( self.Owner, "GrappleHookRetracted" )
+	end
 end
 
 function ENT:OnRemove()

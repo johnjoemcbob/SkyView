@@ -121,6 +121,15 @@ if !SkyView.Config.FirstPerson then
 	end
 end
 
+hook.Add( "PreDrawHalos", "SKY_PreDrawHalos", function()
+	if ( SkyView.Config.ShowHalos ) then
+		halo.Add( player.GetAll(), Color( 150, 150, 255 ), 5, 5, 2, true, true )
+		halo.Add( player.GetAll(), Color( 255, 0, 0 ), 1, 1, 2, true, true )
+		halo.Add( ents.FindByClass( "sky_grapple" ), Color( 150, 150, 255 ), 5, 5, 2, true, true )
+		halo.Add( ents.FindByClass( "sky_grapple" ), Color( 255, 0, 0 ), 1, 1, 2, true, true )
+	end
+end )
+
 
 function GM:HUDShouldDraw(name)
 	if name == "CHudHealth" then 
