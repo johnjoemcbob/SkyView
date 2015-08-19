@@ -1,6 +1,8 @@
+AddCSLuaFile( "cl_buff.lua" )
 AddCSLuaFile("shared.lua") --send to clients
 AddCSLuaFile("shared/sh_config.lua")
 AddCSLuaFile( "sh_stats.lua" )
+AddCSLuaFile( "sh_buff.lua" )
 
 //make dirs to access later
 file.CreateDir("skyview")
@@ -15,8 +17,10 @@ util.AddNetworkString("skyview_firstplayerscreen")
 --Gamemode Includes
 include("shared/sh_config.lua") --load our config file
 include("shared.lua") --load shared.lua file
+include( "sh_buff.lua" )
 include( "sh_stats.lua" )
 
+include( "sv_buff.lua" )
 include( "sv_stats.lua" )
 //
 
@@ -123,6 +127,8 @@ function GM:PlayerInitialSpawn(ply)
 	ply.Jumped = false 
 	ply.JumpTime = 0
 	ply.Shield = nil 
+	ply.HasPowerup = false
+	self:PlayerInitialSpawn_Buff( ply )
 	ply.FileID = ply:SteamID():gsub(":", "-")
 	if !SkyView:PlayerExists(ply) then 
 		--player doesn't exist 
@@ -133,6 +139,9 @@ end
 
 function GM:PlayerSpawn(ply)
 	ply.PropCD = CurTime()+0.2
+	for k, buff in pairs( self.Buffs ) do
+		ply:RemoveBuff( k )
+	end	
 end
 
 function GM:PostPlayerDeath( ply )
@@ -156,6 +165,13 @@ function GM:PostPlayerDeath( ply )
 			otherply.GrappleHook:Attach( data )
 		end
 	end
+	
+	-- Remove all buffs and powerups
+	ply.HasPowerup = false
+	for k, buff in pairs( self.Buffs ) do
+		ply:RemoveBuff( k )
+	end	
+	
 end
 
 -- Death stats!
@@ -271,6 +287,8 @@ end
 
 function GM:Think()
 	self:Think_Stats()
+	-- Used to update buffs on players, function located within sv_buff.lua
+	self:Think_Buff()
 
 	for k,v in pairs(player.GetAll()) do 
 		if v:Alive() then
