@@ -1,6 +1,8 @@
 AddCSLuaFile( "cl_buff.lua" )
 AddCSLuaFile("shared.lua") --send to clients
 AddCSLuaFile("shared/sh_config.lua")
+AddCSLuaFile( "vgui_gamenotice.lua" )
+AddCSLuaFile( "cl_deathnotice.lua" )
 AddCSLuaFile( "sh_stats.lua" )
 AddCSLuaFile( "sh_buff.lua" )
 
@@ -178,6 +180,8 @@ end
 
 -- Death stats!
 function GM:PlayerDeath( ply, inflictor, attacker )
+	self.BaseClass:PlayerDeath( ply, inflictor, attacker )
+
 	if( inflictor:GetClass() == "sky_physprop" ) then
 		if( inflictor:GetThrownBy() != nil and IsValid( inflictor:GetThrownBy() ) ) then
 			attacker = inflictor:GetThrownBy()
@@ -249,9 +253,9 @@ function GM:KeyPress(ply, key)
 					local pos = ply:GetPos()
 					local fireangle = ply:EyeAngles()
 						-- If the player is on the ground they cannot fire downwards, or they will harm themselves
-						if ( ply:IsOnGround() ) then
-							fireangle.p = math.Clamp( fireangle.p, -180, 0 )
-						end
+						-- if ( ply:IsOnGround() ) then
+							-- fireangle.p = math.Clamp( fireangle.p, -180, 0 )
+						-- end
 					local forward = fireangle:Forward()
 					local throwPos = ply:EyePos() + ( forward * 10 )
 					local throwVelocity = nil

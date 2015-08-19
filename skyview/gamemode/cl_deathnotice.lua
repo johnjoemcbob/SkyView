@@ -2,7 +2,7 @@
 	Start of the death message stuff.
 */
 
-include( 'vgui/vgui_gamenotice.lua' )
+include( "vgui_gamenotice.lua" )
 
 local function CreateDeathNotify()
 
@@ -107,6 +107,7 @@ function GM:AddDeathNotice( victim, inflictor, attacker )
 	
 	g_DeathNotify:AddItem( pnl )
 
+	surface.PlaySound( "weapons/flaregun/fire.wav" )
 end
 
 function GM:AddPlayerAction( ... )

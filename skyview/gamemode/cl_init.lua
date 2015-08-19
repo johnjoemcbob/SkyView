@@ -1,5 +1,6 @@
 include("shared.lua")
 include("shared/sh_config.lua")
+include( "cl_deathnotice.lua" )
 
 surface.CreateFont("skyview_firstplayerfont", {
 	font = "Droid Sans Mono",
