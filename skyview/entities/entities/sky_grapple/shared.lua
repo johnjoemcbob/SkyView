@@ -308,8 +308,9 @@ function ENT:Attach( trace )
 		-- Flag as attached to an object
 		self.GrappleAttached = trace.Entity
 		
-		if(trace.Entity:GetClass() == "sky_physprop") then
+		if ( trace.Entity:GetClass() == "sky_physprop" ) then
 			trace.Entity.LastGrappledBy = self.Owner
+			trace.Entity.RemoveTime = CurTime() + SkyView.Config.RemovePropTime
 		end
 	end
 
@@ -376,6 +377,8 @@ end
 
 if ( CLIENT ) then
 	function ENT:Draw()
+		if ( ( not self ) or ( not IsValid( self ) ) ) then return end
+
 		self:DrawModel()
 
 		local player = ents.GetByIndex( self:GetOwnerIndex() )

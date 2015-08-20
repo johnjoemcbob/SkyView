@@ -101,10 +101,6 @@ function SkyView:ShowFirstScreen(ply)
 	net.Send(ply)
 end
 
-function SkyView:ReflectVector( vec, normal, bounce )
-return bounce * ( -2 * ( vec:Dot( normal ) ) * normal + vec );
-end
-
 function SkyView:RandomShieldSound()
 	local soundO, key = table.Random(ShieldHitSounds)
 	return soundO
@@ -180,7 +176,7 @@ end
 
 -- Death stats!
 function GM:PlayerDeath( ply, inflictor, attacker )
-	self.BaseClass:PlayerDeath( ply, inflictor, attacker )
+	--self.BaseClass:PlayerDeath( ply, inflictor, attacker )
 
 	if( inflictor:GetClass() == "sky_physprop" ) then
 		if( inflictor:GetThrownBy() != nil and IsValid( inflictor:GetThrownBy() ) ) then
@@ -201,9 +197,6 @@ function GM:PlayerDeath( ply, inflictor, attacker )
 					-- Somehow walked in front of it.
 					PrintMessage( HUD_PRINTTALK, ply:Name() .. " couldn't dodge themselves." )
 				end
-				
-				
-				
 			else
 				-- Someone else threw it
 				-- Check grapple on prop for grapple kill.
@@ -224,20 +217,16 @@ function GM:PlayerDeath( ply, inflictor, attacker )
 				end
 				attacker:AddFrags( 1 )
 			end
-						
-		end		
-		
+		end
+
 		-- Check for multikill
 		if(inflictor.PlayersKilled > 0) then
 			PrintMessage( HUD_PRINTTALK, "MULTI KILL!" )
 		end
-		
-		
+
 		-- This prop has killed people. O:
 		inflictor.PlayersKilled = inflictor.PlayersKilled + 1
 	end
-
-
 end
 
 function GM:KeyPress(ply, key)
@@ -272,11 +261,7 @@ function GM:KeyPress(ply, key)
 				-- Throw the prop, setting its owner
 				prop:Throw( throwPos, throwVelocity, ply )
 				prop:SetPropOwner(ply)
-				
-				timer.Simple(SkyView.Config.RemovePropTime, function()
-					if IsValid(prop) then prop:Remove() end
-				end)
-				
+
 				ply.PropCD = CurTime()+SkyView.Config.PropSpawnCoolDown
 			end
 		end
@@ -301,22 +286,32 @@ function GM:Think()
 			-- Shield
 			if v:KeyDown(IN_ATTACK2) then
 				if !v.ShieldMade then
-					v.ShieldMade = true 
-					local shield = ents.Create("prop_physics")
-					shield:SetPos(v:EyePos()+v:GetForward()*50)
-					shield:SetAngles(v:GetAngles())
-					shield:SetModel("models/props_interiors/VendingMachineSoda01a_door.mdl")
+					v.ShieldMade = true
+
+					local shield = ents.Create("sky_physprop")
+						shield:SetPos(v:EyePos()+v:GetForward()*50)
+						shield:SetAngles(v:GetAngles())
+						shield.IsShield = true
+						shield:SetModel("models/props_interiors/VendingMachineSoda01a_door.mdl")
+						shield.MeShield = true
+						shield.Owner = v
 					shield:Spawn()
+					v.Shield = shield
+
 					local obj = shield:GetPhysicsObject()
-					obj:SetMass(90000)
-					shield.MeShield = true 
-					v.Shield = shield 
+					if ( obj and IsValid( obj ) ) then
+						obj:SetMass( 90000 )
+					end
+				else
+					v.Shield.RemoveTime = CurTime() + SkyView.Config.RemovePropTime
 				end
 			elseif !v:KeyDown(IN_ATTACK2) and v.ShieldMade then
-				v.Shield:Remove()
-				v.ShieldMade = false 
+				if ( v.Shield and IsValid( v.Shield ) ) then
+					v.Shield:Remove()
+				end
+				v.ShieldMade = false
 			end
-			if v.ShieldMade and v.Shield != nil then
+			if v.ShieldMade and v.Shield and IsValid( v.Shield ) then
 				v.Shield:SetPos(v:EyePos()+v:GetForward()*50)
 				v.Shield:SetAngles(v:GetAngles())
 			end
@@ -376,13 +371,17 @@ function GM:Think()
 					end
 				end
 			end
+		else
+			-- Don't remove the shield on player death, to allow for it rolling around
+			-- (Cleans up after SkyView.Config.RemovePropTime)
+			v.Shield = nil
 		end
 	end
 end
 
 function GM:GetFallDamage( ply, speed )
 	-- Don't take damage if still reeling in
-	if ( ply.Grapple and IsValid( ply.GrappleHook ) ) then
+	if ( ply.Grapple and IsValid( ply.GrappleHook ) and ply.GrappleHook.GrappleAttached ) then
 		return 0
 	end
 	return 10
@@ -400,10 +399,16 @@ function AddGrapple( ply )
 	ply.Grapple = true
 
 	-- Create the grapple hook physics object, which will fly forward of the player
+	local col = GAMEMODE.PlayerColours[math.random( 1, #GAMEMODE.PlayerColours)]
+		col = Vector( col.r / 255, col.g / 255, col.b / 255 )
+	ply:SetPlayerColor( col )
 	ply.GrappleHook = ents.Create( "sky_grapple" )
 		ply.GrappleHook:SetPos( ply:EyePos() )
 		ply.GrappleHook.Direction = ply:EyeAngles():Forward()
 		ply.GrappleHook.Owner = ply
+		col = ply:GetPlayerColor()
+			col = Color( col.x * 255, col.y * 255, col.z * 255 )
+		ply.GrappleHook:SetColor( col )
 	ply.GrappleHook:Spawn()
 end
 

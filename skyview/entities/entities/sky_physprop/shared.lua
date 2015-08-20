@@ -19,6 +19,7 @@ ENT.SamePropsHit = 0
 --ENT.ThrownBy = nil
 ENT.LastGrappledBy = nil
 ENT.RecentlyBounced = 0
+ENT.RemoveTime = 0
 --ENT.JustThrown = 0
 --ENT.Owner = nil
 
@@ -48,22 +49,24 @@ local PropModels =
 	"models/props_junk/TrafficCone001a.mdl"
 }
 
-
-
-
 function ENT:Initialize()
-	-- Set model from table.
-
-	
 	-- Set up physics
 	if ( SERVER ) then
-		self:SetModel(table.Random(PropModels))
+		if ( self:GetModel() == "models/error.mdl" ) then
+			self:SetModel(table.Random(PropModels))
+		end
 		self:PhysicsInit( SOLID_VPHYSICS )	
 		self:PhysWake()
+
+		self.RemoveTime = CurTime() + SkyView.Config.RemovePropTime
+
+		local phys = self:GetPhysicsObject()
+		if ( phys and IsValid( phys ) ) then
+			phys:EnableDrag( false )
+		end
 	end
 
 	self:SetCustomCollisionCheck( true )
-	
 end
 
 function ENT:SetupDataTables()
@@ -85,10 +88,12 @@ function ENT:Think()
 		end
 		
 		-- Tick down just-thrown timer
-		self:SetJustThrown(self:GetJustThrown() - 100 * FrameTime())
-		if(self:GetJustThrown() < 0) then 
-			self:SetJustThrown(0)
-		end	
+		self:SetJustThrown(math.max(self:GetJustThrown() - 100 * FrameTime(),0))
+
+		-- Tick down until removal of the prop
+		if ( CurTime() > self.RemoveTime ) then
+			self:Remove()
+		end
 	end
 end 
 

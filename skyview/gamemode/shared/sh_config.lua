@@ -31,3 +31,7 @@ SkyView.Config.ShowHalos = true --Set whether or not the players should have hal
 --[[
 	
 --]]
+SkyView.Config.MaxPropsPerPlayer = 5 --Max number of props belonging to a player in the world at once
+--[[
+	The higher this is, the more likely the server is to lag/crash
+--]]

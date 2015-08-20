@@ -143,6 +143,10 @@ function PANEL:Paint( w, h )
 	render.SetStencilCompareFunction( STENCIL_EQUAL )
 
 	surface.SetDrawColor( 50, 155, 50, 255 )
+		if ( self.Player and IsValid( self.Player ) ) then
+			local col = self.Player:GetPlayerColor()
+			surface.SetDrawColor( col.x * 255, col.y * 255, col.z * 255, 255 )
+		end
 	surface.SetMaterial( Material_BrushStroke )
 	surface.DrawTexturedRect( 0, 0, w, h )
 end

@@ -20,6 +20,8 @@
 -- last incremented the stat, the current progress towards the next increment,
 -- and the total number of increments
 
+util.AddNetworkString( "PlayerAction" )
+
 function GM:PlayerInitialSpawn_Stats( ply )
 	ply.Stats = {}
 end
@@ -92,20 +94,20 @@ function GM:EventFired( ply, event, args )
 		if ( not ply.Stats[statname].DelayedAcquisition ) then
 			local functionname = "On"..event
 			if ( stat[functionname] ) then
-				local addprogress = stat[functionname]( ply, args )
+				local addprogress, data = stat[functionname]( ply, args )
 				if ( addprogress ) then
 					if ( stat.Cooldown ) then
-						if ( CurTime() < ply.Stats[statname].Cooldown ) then
+						if ( CurTime() < addprogress.Stats[statname].Cooldown ) then
 							continue
 						end
-						ply.Stats[statname].Cooldown = CurTime() + stat.Cooldown
+						addprogress.Stats[statname].Cooldown = CurTime() + stat.Cooldown
 					end
 					if ( stat.DelayedAcquisition ) then
-						ply.Stats[statname].DelayedAcquisition = CurTime() + stat.DelayedAcquisition
+						addprogress.Stats[statname].DelayedAcquisition = CurTime() + stat.DelayedAcquisition
 						return
 					end
 
-					self:EventAcquisition( ply, statname, stat )
+					self:EventAcquisition( addprogress, statname, stat )
 				end
 			end
 		end
@@ -113,6 +115,15 @@ function GM:EventFired( ply, event, args )
 end
 
 function GM:EventAcquisition( ply, statname, stat )
+	if ( not ply.Stats[statname] ) then
+		ply.Stats[statname] = {
+			Progress = 0,
+			TotalIncrements = 0,
+			Cooldown = CurTime(),
+			LastIncrement = 0
+		}
+	end
+
 	-- Add to inbetween progress
 	ply.Stats[statname].LastProgress = CurTime()
 	ply.Stats[statname].Progress = ply.Stats[statname].Progress + 1
@@ -126,15 +137,12 @@ function GM:EventAcquisition( ply, statname, stat )
 		ply.Stats[statname].LastIncrement = CurTime()
 		ply.Stats[statname].TotalIncrements = ply.Stats[statname].TotalIncrements + 1
 
-		-- Display increment message
-		if ( stat.Message ) then
-			ply:ChatPrint( stat.Message .. " " .. ply.Stats[statname].TotalIncrements .. " times" )
-		end
-
-		-- Play increment sound
-		if ( stat.Sound ) then
-			ply:EmitSound( stat.Sound )
-		end
+		-- Send to client, which will display any messages/play any sounds
+		net.Start( "PlayerAction" )
+			net.WriteEntity( ply )
+			net.WriteString( string.format( stat.Message or "", ply:Nick() ) )
+			net.WriteString( stat.Sound or "" )
+		net.Broadcast()
 
 		ply:AddFrags( stat.Score )
 	end
@@ -142,9 +150,16 @@ end
 
 hook.Add( "PlayerDeath", "SKY_STAT_PlayerDeath", function( ply, inflictor, attacker )
 	-- Custom logic for if the inflictor was a prop, and who it was thrown by
-	if( inflictor:GetClass() == "sky_physprop" ) then
-		if( inflictor:GetThrownBy() != nil and IsValid( inflictor:GetThrownBy() ) ) then
+	if ( inflictor:GetClass() == "sky_physprop" ) then
+		if ( inflictor:GetThrownBy() != nil and IsValid( inflictor:GetThrownBy() ) ) then
 			attacker = inflictor:GetThrownBy()
+		end
+		if ( inflictor.IsShield ) then
+			if ( inflictor.LastGrappledBy and IsValid( inflictor.LastGrappledBy ) ) then
+				attacker = inflictor.LastGrappledBy
+			else
+				attacker = inflictor.Owner
+			end
 		end
 	end
 

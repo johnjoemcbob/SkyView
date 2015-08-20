@@ -124,10 +124,16 @@ end
 
 hook.Add( "PreDrawHalos", "SKY_PreDrawHalos", function()
 	if ( SkyView.Config.ShowHalos ) then
-		halo.Add( player.GetAll(), Color( 150, 150, 255 ), 5, 5, 2, true, true )
-		halo.Add( player.GetAll(), Color( 255, 0, 0 ), 1, 1, 2, true, true )
+		halo.Add( { ply }, Color( 150, 150, 255 ), 5, 5, 2, true, true )
+		for k, ply in pairs( player.GetAll() ) do
+			local col = ply:GetPlayerColor()
+				col = Color( col.x * 255, col.y * 255, col.z * 255 )
+			halo.Add( { ply }, col, 1, 1, 2, true, true )
+		end
 		halo.Add( ents.FindByClass( "sky_grapple" ), Color( 150, 150, 255 ), 5, 5, 2, true, true )
-		halo.Add( ents.FindByClass( "sky_grapple" ), Color( 255, 0, 0 ), 1, 1, 2, true, true )
+		for k, ent in pairs( ents.FindByClass( "sky_grapple" ) ) do
+			halo.Add( { ent }, ent:GetColor(), 1, 1, 2, true, true )
+		end
 	end
 end )
 
