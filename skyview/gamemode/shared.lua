@@ -24,14 +24,19 @@ function GM:Initialize()
 end
 
 function GM:ShouldCollide( ent1, ent2 )
+	-- Don't run collision between;
+	-- -	A grapple hook and it's owner
+	-- -	Two grapple hooks
+	-- -	Props JUST thrown by self (as they are still inside self)
+	-- -	Active shields and anything other than grapple hooks or props
 	if (
 		( ( ent1:GetClass() == "sky_grapple" ) and ( ent1.Owner == ent2 ) ) or
 		( ( ent2:GetClass() == "sky_grapple" ) and ( ent2.Owner == ent1 ) ) or
 		( ( ent1:GetClass() == "sky_grapple" ) and ( ent2:GetClass() == "sky_grapple" ) ) or
 		( ( ent1:GetClass() == "sky_physprop") and ( ent1.GetJustThrown ) and ( ent1:GetJustThrown() > 0) and (ent2 == ent1:GetThrownBy()) ) or
 		( ( ent2:GetClass() == "sky_physprop") and ( ent2.GetJustThrown ) and ( ent2:GetJustThrown() > 0) and (ent1 == ent2:GetThrownBy()) ) or
-		( ( ent1:GetClass() == "sky_physprop") and ( ent1.IsShield ) and ( ent2:GetClass() ~= "sky_grapple" ) and ( ent2:GetClass() ~= "sky_physprop" ) ) or
-		( ( ent2:GetClass() == "sky_physprop") and ( ent2.IsShield ) and ( ent1:GetClass() ~= "sky_grapple" ) and ( ent1:GetClass() ~= "sky_physprop" ) )
+		( ( ent1:GetClass() == "sky_physprop") and ( ent1.IsShield ) and ( ent1.IsActiveShield ) and ( ent2:GetClass() ~= "sky_grapple" ) and ( ent2:GetClass() ~= "sky_physprop" ) and ( not ent2:IsPlayer() ) ) or
+		( ( ent2:GetClass() == "sky_physprop") and ( ent2.IsShield ) and ( ent2.IsActiveShield ) and ( ent1:GetClass() ~= "sky_grapple" ) and ( ent1:GetClass() ~= "sky_physprop" ) and ( not ent2:IsPlayer() ) )
 	) then	
 		return false
 	end

@@ -307,10 +307,17 @@ function ENT:Attach( trace )
 
 		-- Flag as attached to an object
 		self.GrappleAttached = trace.Entity
-		
+
+		-- Attached to a thrown prop or shield
 		if ( trace.Entity:GetClass() == "sky_physprop" ) then
 			trace.Entity.LastGrappledBy = self.Owner
 			trace.Entity.RemoveTime = CurTime() + SkyView.Config.RemovePropTime
+
+			-- Attached to an active shield, make it inactive
+			if ( trace.Entity.IsShield and trace.Entity.IsActiveShield ) then
+				trace.Entity.IsActiveShield = false
+				trace.Entity.Owner.Shield = nil
+			end
 		end
 	end
 

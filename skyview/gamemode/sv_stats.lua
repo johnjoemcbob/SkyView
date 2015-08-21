@@ -44,8 +44,13 @@ function GM:Think_Stats()
 			if ( ply.Stats[statname] and ply.Stats[statname].DelayedAcquisition and ( CurTime() >= ply.Stats[statname].DelayedAcquisition ) ) then
 				local shouldaquire = stat:OnDelayedAcquisition( ply )
 				if ( shouldaquire ) then
-					self:EventAcquisition( ply, statname, stat )
+					local increment = self:EventAcquisition( ply, statname, stat )
+					-- Only display the message if there has been adequate progress
+					if ( increment ) then
+						self:EventSendMessage( ply, stat, ply.Stats[statname].Data )
+					end
 				end
+				ply.Stats[statname].Data = nil
 				ply.Stats[statname].DelayedAcquisition = nil
 			end
 		end
@@ -56,6 +61,11 @@ end
 -- in order to facilitate stat tracking
 function GM:EventFired( ply, event, args )
 	if ( not SkyView.Config.StatTracking ) then return end
+
+	-- Table of buffered messages to iterate backwards through after the main event loop
+	-- Any messages with a MessageType are added to this, so that only one of each type is
+	-- displayed (i.e. one death message, one kill message, etc)
+	local messages = {}
 
 	-- Loop through stats in alphabetical order
 	-- NOTE: Taken from the base Garry's Mod PrintTable function (https://github.com/garrynewman/garrysmod/blob/02158910200e8e91482dc8e3fde647b5f33da31d/garrysmod/lua/includes/util.lua)
@@ -94,7 +104,7 @@ function GM:EventFired( ply, event, args )
 		if ( not ply.Stats[statname].DelayedAcquisition ) then
 			local functionname = "On"..event
 			if ( stat[functionname] ) then
-				local addprogress, data = stat[functionname]( ply, args )
+				local addprogress, data = stat[functionname]( stat, ply, args )
 				if ( addprogress ) then
 					if ( stat.Cooldown ) then
 						if ( CurTime() < addprogress.Stats[statname].Cooldown ) then
@@ -104,14 +114,28 @@ function GM:EventFired( ply, event, args )
 					end
 					if ( stat.DelayedAcquisition ) then
 						addprogress.Stats[statname].DelayedAcquisition = CurTime() + stat.DelayedAcquisition
+						addprogress.Stats[statname].Data = data
 						return
 					end
 
-					self:EventAcquisition( addprogress, statname, stat )
+					local increment = self:EventAcquisition( addprogress, statname, stat )
+					if ( increment ) then
+						-- Display message or buffer it for display after the event loop
+						if ( stat.MessageType ) then
+							-- Add player's name to the message type, so each player can have one of each message per event loop
+							table.insert( messages, { type = stat.MessageType..tostring( addprogress:Nick() ), ply = addprogress, stat = stat, data = data } )
+						else
+							-- Display the message now
+							self:EventSendMessage( addprogress, stat, data )
+						end
+					end
 				end
 			end
 		end
 	end
+
+	-- Send the buffered messages now
+	self:EventSendBufferedMessages( messages )
 end
 
 function GM:EventAcquisition( ply, statname, stat )
@@ -137,15 +161,42 @@ function GM:EventAcquisition( ply, statname, stat )
 		ply.Stats[statname].LastIncrement = CurTime()
 		ply.Stats[statname].TotalIncrements = ply.Stats[statname].TotalIncrements + 1
 
-		-- Send to client, which will display any messages/play any sounds
-		net.Start( "PlayerAction" )
-			net.WriteEntity( ply )
-			net.WriteString( string.format( stat.Message or "", ply:Nick() ) )
-			net.WriteString( stat.Sound or "" )
-		net.Broadcast()
+		-- Increment player score
+		ply:SetFrags( ply:Frags() + stat.Score )
 
-		ply:AddFrags( stat.Score )
+		return true
 	end
+
+	return false
+end
+
+function GM:EventSendBufferedMessages( messages )
+	-- Table of the currently used up message types
+	local typeused = {}
+
+	-- Iterate backwards through all messages
+	for messageindex = #messages, 1, -1 do
+		local message = messages[messageindex]
+		if ( not typeused[message.type] ) then
+			-- Display the message
+			self:EventSendMessage( message.ply, message.stat, message.data )
+
+			-- Flag this message type as used up for the current event loop
+			typeused[message.type] = true
+		end
+	end
+end
+
+function GM:EventSendMessage( ply, stat, data )
+	-- Send to client, which will display any messages/play any sounds
+	net.Start( "PlayerAction" )
+		net.WriteEntity( ply )
+		net.WriteString( replace_vars(
+			stat.Message,
+			data
+		) )
+		net.WriteString( stat.Sound or "" )
+	net.Broadcast()
 end
 
 hook.Add( "PlayerDeath", "SKY_STAT_PlayerDeath", function( ply, inflictor, attacker )
@@ -165,3 +216,21 @@ hook.Add( "PlayerDeath", "SKY_STAT_PlayerDeath", function( ply, inflictor, attac
 
 	GAMEMODE:EventFired( ply, "PlayerDeath", { inflictor, attacker } )
 end )
+
+-- From http://lua-users.org/wiki/StringInterpolation by http://lua-users.org/wiki/MarkEdgar
+function replace_vars( str, vars )
+	if ( not str ) then return "" end
+
+	-- Allow replace_vars{str, vars} syntax as well as replace_vars(str, {vars})
+	if ( not vars ) then
+		vars = str
+		str = vars[1]
+	end
+	return ( string.gsub(
+		str,
+		"({([^}]+)})",
+		function( whole, i )
+			return vars[i] or whole
+		end
+	) )
+end

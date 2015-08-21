@@ -16,7 +16,23 @@ surface.CreateFont("skyview_firstplayerfont2", {
 	bold = true
 } )
 
+surface.CreateFont("skyview_noticefont", {
+	font = "Impact",
+	size = ScreenScale(16),
+	shadow = true,
+	bold = true
+} )
+
+surface.CreateFont("skyview_scorefont", {
+	font = "Impact",
+	size = ScreenScale(30),
+	shadow = true,
+	bold = true
+} )
+
 local myView = 90
+local LastDisplayedScore = 0
+local ScoreShake = 0
 
 net.Receive("skyview_firstplayerscreen", function(ply)
 	local FirstScreenMenu = vgui.Create("DFrame")
@@ -145,6 +161,25 @@ function GM:HUDShouldDraw(name)
 	return true 
 end 
 
+function GM:HUDPaint()
+	local padding = 16
+	local x = ScrW() / 2
+	local y = ScrH() / 80
+
+	-- Find the required width for the score text
+	local font = "skyview_scorefont"
+	local text = LocalPlayer():Frags()
+	if ( text ~= LastDisplayedScore ) then
+		ScoreShake = 100
+		LastDisplayedScore = text
+	else
+		ScoreShake = math.max( ScoreShake - 3, 0 )
+	end
+
+	-- Display the score text
+	draw.TextRotated( text, x, y, Color( 255, 255, 255 ), font, math.sin( CurTime() * ScoreShake ) * 30 )
+end
+
 function GM:RenderScreenspaceEffects()
 	local tab = {}
 	tab[ "$pp_colour_addr" ] = 0
@@ -158,3 +193,35 @@ function GM:RenderScreenspaceEffects()
 	tab[ "$pp_colour_mulb" ] = 1 
 	DrawColorModify(tab)
 end 
+
+-- From http://wiki.garrysmod.com/page/cam/PushModelMatrix
+function draw.TextRotated( text, x, y, color, font, ang )
+	render.PushFilterMag( TEXFILTER.ANISOTROPIC )
+	render.PushFilterMin( TEXFILTER.ANISOTROPIC )
+	surface.SetFont( font )
+	surface.SetTextColor( color )
+	surface.SetTextPos( 0, 0 )
+	local textWidth, textHeight = surface.GetTextSize( text )
+	local rad = -math.rad( ang )
+	x = x - ( math.cos( rad ) * textWidth / 2 + math.sin( rad ) * textHeight / 2 )
+	y = y + ( math.sin( rad ) * textWidth / 2 + math.cos( rad ) * textHeight / 2 )
+	local m = Matrix()
+	m:SetAngles( Angle( 0, ang, 0 ) )
+	m:SetTranslation( Vector( x, y, 0 ) )
+	cam.PushModelMatrix( m )
+		draw.TextShadow(
+			{
+				text = text,
+				font = font,
+				pos = { 0, 0 },
+				xalign = 0,
+				yalign = 4,
+				color = color
+			},
+			2,
+			255
+		)
+	cam.PopModelMatrix()
+	render.PopFilterMag()
+	render.PopFilterMin()
+end

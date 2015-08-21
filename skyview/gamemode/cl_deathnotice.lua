@@ -1,5 +1,12 @@
 include( "vgui_gamenotice.lua" )
 
+local Sound_OrchestraHit = Sound( "skyview/orch.wav" )
+
+local BasePitch = 60
+local MaxPitch = 200
+local CurrentOrchPitch = BasePitch
+local NextPitchDown = nil
+
 local function CreateDeathNotify()
 	local x, y = ScrW(), ScrH()
 
@@ -14,19 +21,34 @@ local function CreateDeathNotify()
 end
 hook.Add( "InitPostEntity", "CreateDeathNotify", CreateDeathNotify )
 
+hook.Add( "Think", "SKY_Notice_Think", function()
+	if ( NextPitchDown and ( CurTime() > NextPitchDown ) ) then
+		CurrentOrchPitch = BasePitch
+		NextPitchDown = nil
+	end
+end )
+
 local function RecvPlayerAction( length )
 	local ply 		= net.ReadEntity()
 	local action 	= net.ReadString()
-	local sound 	= net.ReadString()
+	local soundfile	= net.ReadString()
 
 	if ( not IsValid( ply ) ) then return end
 
 	if ( string.len( action ) ~= 0 ) then
 		GAMEMODE:AddPlayerAction( ply, action )
+
+		-- Up pitch and play orchestra hit
+		CurrentOrchPitch = math.Clamp( CurrentOrchPitch + 5, BasePitch, MaxPitch )
+		sound.Play( Sound_OrchestraHit, LocalPlayer():EyePos(), 150, CurrentOrchPitch )
+		NextPitchDown = CurTime() + 5
+		--surface.PlaySound( "skyview/orch.wav" )
 	end
 
-	if ( string.len( sound ) ~= 0 ) then
-		surface.PlaySound( sound )
+	if ( string.len( soundfile ) ~= 0 ) then
+		timer.Simple( 0.2, function()
+			--surface.PlaySound( soundfile )
+		end )
 	end
 end
 net.Receive( "PlayerAction", RecvPlayerAction )

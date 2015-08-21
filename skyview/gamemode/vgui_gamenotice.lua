@@ -2,7 +2,8 @@
 local hud_deathnotice_time = CreateClientConVar( "hud_deathnotice_time", "6", true, false )
 local hud_deathnotice_limit = CreateClientConVar( "hud_deathnotice_limit", "5", true, false )
 
-local Material_BrushStroke = Material( "skyview/brushstroke" )
+Material_BrushStroke = Material( "skyview/brushstroke" )
+Material_BrushStroke_Short = Material( "skyview/brushstrokeshort" )
 
 --[[
 	This is the player death panel. This should be parented to a DeathMessage_Panel. The DeathMessage_Panel that
@@ -62,7 +63,7 @@ function PANEL:AddText( txt, color )
 	Derma_Hook( lbl, 	"ApplySchemeSettings", 	"Scheme", 	"GameNoticeLabel" )
 	lbl:ApplySchemeSettings()
 	lbl:SetText( txt )
-	lbl:SetFont( "CloseCaption_Bold" )
+	lbl:SetFont( "skyview_noticefont" )
 	
 	if( string.Left( txt , 1 ) == "#" && !color ) then color = GAMEMODE.DeathNoticeDefaultColor end // localised ent death
 	if( GAMEMODE.DeathNoticeTextColor && !color ) then color = GAMEMODE.DeathNoticeTextColor end // something else
@@ -149,6 +150,9 @@ function PANEL:Paint( w, h )
 		end
 	surface.SetMaterial( Material_BrushStroke )
 	surface.DrawTexturedRect( 0, 0, w, h )
+
+	render.SetStencilEnable( false )
+	--self.SpawnIcon:PaintManual()
 end
 
 derma.DefineControl( "GameNotice", "", PANEL, "DPanel" )

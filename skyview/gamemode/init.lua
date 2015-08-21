@@ -107,6 +107,9 @@ function SkyView:RandomShieldSound()
 end
 
 //Base Functions
+resource.AddFile( "materials/skyview/brushstroke.vmt" )
+resource.AddFile( "materials/skyview/brushstrokeshort.vmt" )
+resource.AddFile( "sound/skyview/orch.wav" )
 
 function GM:PlayerInitialSpawn(ply)
 	-- Found in sv_stats.lua
@@ -140,6 +143,11 @@ function GM:PlayerSpawn(ply)
 	for k, buff in pairs( self.Buffs ) do
 		ply:RemoveBuff( k )
 	end	
+
+	-- Choose a random colour
+	local col = GAMEMODE.PlayerColours[math.random( 1, #GAMEMODE.PlayerColours)]
+		col = Vector( col.r / 255, col.g / 255, col.b / 255 )
+	ply:SetPlayerColor( col )
 end
 
 
@@ -215,7 +223,6 @@ function GM:PlayerDeath( ply, inflictor, attacker )
 					-- Normal kill.
 					PrintMessage( HUD_PRINTTALK, attacker:Name() .. " ground " .. ply:Name() .. " into a paste." )
 				end
-				attacker:AddFrags( 1 )
 			end
 		end
 
@@ -248,9 +255,9 @@ function GM:KeyPress(ply, key)
 					local forward = fireangle:Forward()
 					local throwPos = ply:EyePos() + ( forward * 10 )
 					local throwVelocity = nil
-					
+
 					if SkyView.Config.FirstPerson then
-						throwVelocity = ( forward * 2000 + ply:GetVelocity() )
+						throwVelocity = ( forward * 3000 + ply:GetVelocity() )
 					else
 						throwVelocity = ( ply:GetForward() * 2000 + ply:GetVelocity() )
 						--Why we did the thing above? Because when we're in the sky view, we can't aim where we shoot.
@@ -281,101 +288,109 @@ function GM:Think()
 	-- Used to update buffs on players, function located within sv_buff.lua
 	self:Think_Buff()
 
-	for k,v in pairs(player.GetAll()) do 
-		if v:Alive() then
-			-- Shield
-			if v:KeyDown(IN_ATTACK2) then
-				if !v.ShieldMade then
-					v.ShieldMade = true
-
-					local shield = ents.Create("sky_physprop")
-						shield:SetPos(v:EyePos()+v:GetForward()*50)
-						shield:SetAngles(v:GetAngles())
-						shield.IsShield = true
-						shield:SetModel("models/props_interiors/VendingMachineSoda01a_door.mdl")
-						shield.MeShield = true
-						shield.Owner = v
-					shield:Spawn()
-					v.Shield = shield
-
-					local obj = shield:GetPhysicsObject()
-					if ( obj and IsValid( obj ) ) then
-						obj:SetMass( 90000 )
-					end
-				else
-					v.Shield.RemoveTime = CurTime() + SkyView.Config.RemovePropTime
-				end
-			elseif !v:KeyDown(IN_ATTACK2) and v.ShieldMade then
-				if ( v.Shield and IsValid( v.Shield ) ) then
-					v.Shield:Remove()
-				end
-				v.ShieldMade = false
-			end
-			if v.ShieldMade and v.Shield and IsValid( v.Shield ) then
-				v.Shield:SetPos(v:EyePos()+v:GetForward()*50)
-				v.Shield:SetAngles(v:GetAngles())
-			end
+	for k, ply in pairs( player.GetAll() ) do 
+		if ( ply:Alive() ) then
+			-- Run shield think logic
+			self:Think_Shield( ply )
 
 			-- If on the grapple hook & reeling in, jumping can launch you into the air
 			if (
-				v:KeyDown( IN_JUMP ) and
-				v.Grapple and v.GrappleHook and IsValid( v.GrappleHook ) and
-				( v.GrappleHook.GrappleAttached ~= false )
+				ply:KeyDown( IN_JUMP ) and
+				ply.Grapple and ply.GrappleHook and IsValid( ply.GrappleHook ) and
+				( ply.GrappleHook.GrappleAttached ~= false )
 			) then
 				-- Jump
-			 	v:SetVelocity( Vector( 0, 0, 400 ) )
-				GAMEMODE:EventFired( v, "PlayerGrappleJump" )
+			 	ply:SetVelocity( Vector( 0, 0, 400 ) )
+				GAMEMODE:EventFired( ply, "PlayerGrappleJump" )
 
 				-- Increase the velocity of the attached item (if it's an entity)
-				if ( type( v.GrappleHook.GrappleAttached ) == "Entity" ) then
-					local phys = v.GrappleHook.GrappleAttached:GetPhysicsObject()
+				if ( type( ply.GrappleHook.GrappleAttached ) == "Entity" ) then
+					local phys = ply.GrappleHook.GrappleAttached:GetPhysicsObject()
 					if ( phys and IsValid( phys ) ) then
 						phys:SetVelocity(
-							phys:GetVelocity() / v.GrappleHook.InvertSpeedMultiplier
+							phys:GetVelocity() / ply.GrappleHook.InvertSpeedMultiplier
 						)
 					end
 				end
 				-- Remove the hook
-				RemoveGrapple( v )
-			elseif v:KeyDown(IN_JUMP) and v.InAir and !v.Jumped then
-				if CurTime() >= v.JumpTime then
-				 	v.Jumped = true 
-				 	v:SetVelocity(Vector(0,0,300))
-				 	v.JumpTime = 0
-					GAMEMODE:EventFired( v, "PlayerDoubleJump" )
+				RemoveGrapple( ply )
+			elseif ply:KeyDown(IN_JUMP) and ply.InAir and !ply.Jumped then
+				if CurTime() >= ply.JumpTime then
+				 	ply.Jumped = true 
+				 	ply:SetVelocity(Vector(0,0,300))
+				 	ply.JumpTime = 0
+					GAMEMODE:EventFired( ply, "PlayerDoubleJump" )
 				end
-			elseif v:KeyDown(IN_JUMP) and v:IsOnGround() then
-				if v.JumpTime == 0 then 
-					v.JumpTime = CurTime()+SkyView.Config.DoubleJumpTime
+			elseif ply:KeyDown(IN_JUMP) and ply:IsOnGround() then
+				if ply.JumpTime == 0 then 
+					ply.JumpTime = CurTime()+SkyView.Config.DoubleJumpTime
 				end
-				v:SetVelocity(Vector(0,0,300))
-				v.InAir = true
-				v.Jumped = false
-				GAMEMODE:EventFired( v, "PlayerJump" )
+				ply:SetVelocity(Vector(0,0,300))
+				ply.InAir = true
+				ply.Jumped = false
+				GAMEMODE:EventFired( ply, "PlayerJump" )
 			-- Set ability to normal/double jump if on ground and not grappling
-			elseif v:OnGround() and ( ( not v.Grapple ) or ( not v.GrappleHook ) or ( not IsValid( v.GrappleHook ) ) or ( not v.GrappleHook.GrappleAttached) ) then 
-				v.InAir = false 
-				v.Jumped = false 
-				v.JumpTime = 0
+			elseif ply:OnGround() and ( ( not ply.Grapple ) or ( not ply.GrappleHook ) or ( not IsValid( ply.GrappleHook ) ) or ( not ply.GrappleHook.GrappleAttached) ) then 
+				ply.InAir = false 
+				ply.Jumped = false 
+				ply.JumpTime = 0
 			end
 
 			-- Pass over props
-			for _, prop in pairs( ents.FindInSphere( v:GetPos(), 200 ) ) do
+			for _, prop in pairs( ents.FindInSphere( ply:GetPos(), 200 ) ) do
 				-- Is a prop
 				if ( ( prop:GetClass() == "sky_physprop" ) or ( prop:GetClass() == "prop_physics" ) ) then
 					-- Is close on every axis, but under on the z
-					local horizontaldistance = v:GetPos():Distance( Vector( prop:GetPos().x, prop:GetPos().y, v:GetPos().z ) )
-					local verticaldistance = prop:GetPos().z - v:GetPos().z
+					local horizontaldistance = ply:GetPos():Distance( Vector( prop:GetPos().x, prop:GetPos().y, ply:GetPos().z ) )
+					local verticaldistance = prop:GetPos().z - ply:GetPos().z
 					if ( ( horizontaldistance < 200 ) and ( verticaldistance > -200 ) and ( verticaldistance < 0 ) ) then
-						GAMEMODE:EventFired( v, "TravelOverProp", prop )
+						GAMEMODE:EventFired( ply, "TravelOverProp", prop )
 					end
 				end
 			end
 		else
 			-- Don't remove the shield on player death, to allow for it rolling around
 			-- (Cleans up after SkyView.Config.RemovePropTime)
-			v.Shield = nil
+			ply.Shield = nil
 		end
+	end
+end
+
+function GM:Think_Shield( ply )
+	if ( ply:KeyDown( IN_ATTACK2 ) ) then
+		if ( not ply.ShieldMade ) then
+			ply.ShieldMade = true
+
+			-- Spawn the shield
+			local shield = ents.Create("sky_physprop")
+				shield:SetModel( "models/props_interiors/VendingMachineSoda01a_door.mdl" )
+				shield:SetPos( ply:EyePos() + ply:GetForward() * 50 )
+				shield:SetAngles( ply:GetAngles() )
+				shield.IsShield = true
+				shield.IsActiveShield = true
+				shield.MeShield = true
+				shield.Owner = ply
+			shield:Spawn()
+			ply.Shield = shield
+
+			-- Make it immovable
+			local obj = shield:GetPhysicsObject()
+			if ( obj and IsValid( obj ) ) then
+				obj:SetMass( 90000 )
+			end
+		elseif ( ply.Shield and IsValid( ply.Shield ) ) then
+			-- Do not remove it when the player is holding it
+			ply.Shield.RemoveTime = CurTime() + SkyView.Config.RemovePropTime
+		end
+	elseif ( ( not ply:KeyDown( IN_ATTACK2 ) ) and ply.ShieldMade ) then
+		if ( ply.Shield and IsValid( ply.Shield ) ) then
+			ply.Shield:Remove()
+		end
+		ply.ShieldMade = false
+	end
+	if ply.ShieldMade and ply.Shield and IsValid( ply.Shield ) then
+		ply.Shield:SetPos( ply:EyePos() + ply:GetForward() * 50 )
+		ply.Shield:SetAngles( ply:GetAngles() )
 	end
 end
 
@@ -399,9 +414,6 @@ function AddGrapple( ply )
 	ply.Grapple = true
 
 	-- Create the grapple hook physics object, which will fly forward of the player
-	local col = GAMEMODE.PlayerColours[math.random( 1, #GAMEMODE.PlayerColours)]
-		col = Vector( col.r / 255, col.g / 255, col.b / 255 )
-	ply:SetPlayerColor( col )
 	ply.GrappleHook = ents.Create( "sky_grapple" )
 		ply.GrappleHook:SetPos( ply:EyePos() )
 		ply.GrappleHook.Direction = ply:EyeAngles():Forward()
