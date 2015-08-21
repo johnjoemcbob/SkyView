@@ -20,6 +20,12 @@ ENT.SamePropsHit = 0
 ENT.LastGrappledBy = nil
 ENT.RecentlyBounced = 0
 ENT.RemoveTime = 0
+ENT.NearMissRadius = 100
+ENT.NearMissTime = 0.7
+ENT.NearPlayers = nil
+ENT.CollidedPlayers = nil
+ENT.LastBounce = 0
+ENT.BetweenBounceTime = 1
 --ENT.JustThrown = 0
 --ENT.Owner = nil
 
@@ -56,17 +62,21 @@ function ENT:Initialize()
 			self:SetModel(table.Random(PropModels))
 		end
 		self:PhysicsInit( SOLID_VPHYSICS )	
-		self:PhysWake()
+		--self:PhysWake()
 
 		self.RemoveTime = CurTime() + SkyView.Config.RemovePropTime
 
 		local phys = self:GetPhysicsObject()
 		if ( phys and IsValid( phys ) ) then
 			phys:EnableDrag( false )
+			--phys:Wake()
 		end
 	end
 
 	self:SetCustomCollisionCheck( true )
+
+	self.NearPlayers = {}
+	self.CollidedPlayers = {}
 end
 
 function ENT:SetupDataTables()
@@ -75,8 +85,6 @@ function ENT:SetupDataTables()
 	self:NetworkVar("Entity", 1, "PropOwner")
 	-- JustThrown Value
 	self:NetworkVar("Float", 0, "JustThrown")
-	
-	
 end
 
 function ENT:Think()
@@ -94,8 +102,53 @@ function ENT:Think()
 		if ( CurTime() > self.RemoveTime ) then
 			self:Remove()
 		end
+
+		-- Near miss logic;
+		-- Find near by players and flag them for collision checking, if they collide within a certain time (either before or after)
+		-- then they are removed from the near miss tracking; otherwise the stat is incremented and a message displayed
+		if ( not self.IsActiveShield ) then
+			local nearents = ents.FindInSphere( self:GetPos(), self.NearMissRadius )
+			for k, ent in pairs( nearents ) do
+				if ( ent:IsPlayer() ) then
+					-- Only count a near miss with the throwing player if the entity has existed for a while, and bounced back
+					if ( ( self:GetJustThrown() == 0 ) or ( ent ~= self.Owner ) ) then
+						if ( not self.NearPlayers[ent:EntIndex()] ) then
+							self.NearPlayers[ent:EntIndex()] = CurTime()
+						end
+					end
+				end
+			end
+		end
+
+		-- Check players that have been near against players which have collided to find those who narrowly missed the object
+		for plyindex, neartime in pairs( self.NearPlayers ) do
+			if ( ( CurTime() - self.NearMissTime ) > neartime ) then
+				local ply = ents.GetByIndex( plyindex )
+
+				-- The time since the player was logged as near
+				local nearstarttime = CurTime() - neartime
+
+				-- The time since the player last collided with this prop
+				local timedif = math.abs( CurTime() - ( self.CollidedPlayers[plyindex] or CurTime() ) )
+
+				-- Player has died recently, ignore near miss
+				if ( ( ply.Stats["death"] and ( ( CurTime() - ply.Stats["death"].LastIncrement ) <= math.max( nearstarttime, timedif ) ) ) or ( not ply:Alive() ) ) then
+					self.NearPlayers[plyindex] = nil
+					continue
+				end
+
+				-- Has never collided with the player, or did so some time ago
+				if ( ( not self.CollidedPlayers[plyindex] ) or ( timedif > self.NearMissTime ) ) then
+					GAMEMODE:EventFired( ply, "NearMiss", { self } )
+
+					-- Flag this as a collision to delay near miss messages for this player and this prop
+					self.NearPlayers[plyindex] = nil
+					self.CollidedPlayers[plyindex] = CurTime() + 10
+				end
+			end
+		end
 	end
-end 
+end
 
 function ENT:ReflectVector( vec, normal, bounce )
 	return bounce * ( -2 * ( vec:Dot( normal ) ) * normal + vec )
@@ -105,34 +158,44 @@ function ENT:PhysicsCollide( colData, collider )
 	if( SERVER ) then 
 		-- Make em bouncy
 		local hitEnt = colData.HitEntity
-		
+
 		local bounceVel = self:ReflectVector( colData.OurOldVelocity, colData.HitNormal, SkyView.Config.ReflectNum )
-		
+
 		local phys = self:GetPhysicsObject()
 		if ( phys and IsValid( phys ) ) then
 			if(!hitEnt:IsWorld() and !string.find(hitEnt:GetClass(), "func")) then 
 				if (hitEnt.MeShield) then
 					hitEnt:EmitSound(SkyView:RandomShieldSound())
+					-- Get velocity based on the shield angles
+					local bounceVel = self:GetAngles():Forward() * -10000
 					phys:SetVelocity(bounceVel)
 				end
 			elseif(hitEnt:IsWorld() or string.find(hitEnt:GetClass(), "func")) then
-				phys:SetVelocity(bounceVel)
+				-- In an attempt to stop physics crashes, props can only bounce every so often
+				if ( CurTime() >= self.LastBounce ) then
+					phys:SetVelocity(bounceVel)
+					self.LastBounce = CurTime() + self.BetweenBounceTime
+				end
 			end
 		end
-		
+
+		-- Near miss logic
+		if ( hitEnt:IsPlayer() ) then
+			self.CollidedPlayers[hitEnt:EntIndex()] = CurTime()
+		end
+
 		-- Stats	
 		if(colData.Speed > 50) then
 			self.TimesBounced = self.TimesBounced + 1
 			self.RecentlyBounced = 60 -- engage bounce timer.
 		end
-		
+
 		if(hitEnt:GetClass() == "sky_physprop" or hitEnt:GetClass() == "prop_physics") then
 			if(hitEnt:GetModel() == self:GetModel()) then
 				self.SamePropsHit = self.SamePropsHit + 1
 			end
 			self.OtherPropsHit = self.OtherPropsHit + 1
 		end
-	
 	end
 end
 

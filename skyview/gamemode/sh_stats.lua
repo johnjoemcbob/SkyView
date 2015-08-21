@@ -28,9 +28,27 @@
 -- -	OnGrappleHookRetracted
 -- -	OnGrappleHookAttached
 -- -	OnTravelOverProp (called when the player is travelling above a prop)
+-- -	OnNearMiss (called from within sky_physprop when a player narrowly avoids it)
 -- -	OnDelayedAcquisition (called when a stat has a delayed check, normally used to see if the player dies soon after)
 GM.Stats = {}
 
+GM.Stats["nearmiss"] = {
+	Name = "Near Misses: %i",
+	Message = "A prop narrowly missed {self}",
+	--MessageType = "",
+	Sound = "skyview/announcer/near_miss.mp3",
+	Score = 50,
+	ProgressIncrement = 1, -- The amount to increment each time this stat tracks
+	ProgressMax = 1, -- The amount of progress required before it is counted as achieved on the player and progress is reset
+	Prerequisite = nil,
+	PrerequisiteTime = 0,
+	OnNearMiss = function( self, ply, args )
+		return ply,  -- Flag to add to stat progress (within sv_stats.lua)
+		{
+			self = ply:Nick()
+		}
+	end
+}
 GM.Stats["death"] = {
 	Name = "Deaths: %i",
 	--Message = "{self} died (how?)",
@@ -88,6 +106,26 @@ GM.Stats["death_world"] = {
 		end
 	end
 }
+GM.Stats["death_world_sky"] = {
+	Name = "SkyFail Gravity Deaths: %i",
+	Message = "{self} fell to their death trying to grapple the sky",
+	MessageType = "death",
+	--Sound = "vo/Breencast/br_collaboration02.wav",
+	Score = -150,
+	ProgressIncrement = 1, -- The amount to increment each time this stat tracks
+	ProgressMax = 1, -- The amount of progress required before it is counted as achieved on the player and progress is reset
+	Prerequisite = "death_world",
+	PrerequisiteTime = 0,
+	OnPlayerDeath = function( self, ply, args )
+		-- If the player recently grappled the sky
+		if ( GAMEMODE:EventCheckPrerequisite( ply, "grapple_hitsky", 5 ) ) then
+			return ply,  -- Flag to add to stat progress (within sv_stats.lua)
+			{
+				self = ply:Nick()
+			}
+		end
+	end
+}
 GM.Stats["death_suicide_grapple"] = {
 	Name = "Suicides by Hook: %i",
 	Message = "{self} reeled in a big one",
@@ -112,7 +150,7 @@ GM.Stats["kill"] = {
 	Name = "Kills: %i",
 	Message = "{self} killed {victim}",
 	MessageType = "kill",
-	Sound = "weapons/flaregun/fire.wav",
+	--Sound = "weapons/flaregun/fire.wav",
 	Score = 0,
 	ProgressIncrement = 1, -- The amount to increment each time this stat tracks
 	ProgressMax = 1, -- The amount of progress required before it is counted as achieved on the player and progress is reset
@@ -133,7 +171,7 @@ GM.Stats["kill_prop"] = {
 	Name = "Prop Kills: %i",
 	Message = "{self} prop killed {victim}",
 	MessageType = "kill",
-	Sound = "weapons/flaregun/fire.wav",
+	Sound = "skyview/announcer/prop_kill.mp3",
 	Score = 150,
 	ProgressIncrement = 1, -- The amount to increment each time this stat tracks
 	ProgressMax = 1, -- The amount of progress required before it is counted as achieved on the player and progress is reset
@@ -152,9 +190,9 @@ GM.Stats["kill_prop"] = {
 }
 GM.Stats["kill_shield"] = {
 	Name = "Shield Kills: %i",
-	Message = "{self} SHIELD KILLED {victim}",
+	Message = "{self} shield bashed {victim}",
 	MessageType = "kill",
-	Sound = "weapons/flaregun/fire.wav",
+	Sound = "skyview/announcer/shield_kill.mp3",
 	Score = 500,
 	ProgressIncrement = 1, -- The amount to increment each time this stat tracks
 	ProgressMax = 1, -- The amount of progress required before it is counted as achieved on the player and progress is reset
@@ -164,17 +202,37 @@ GM.Stats["kill_shield"] = {
 		-- Killed them with a shield
 		if ( ( args[2]:GetClass() == "player" ) and ( args[1]:GetClass() == "sky_physprop" ) and args[1].IsShield ) then
 			-- Change message type depending on if it was a self kill or another player kill
-			if ( ply == args[2] ) then
-				self.MessageType = "death"
-			else
-				self.MessageType = "kill"
+			if ( ply ~= args[2] ) then
+				return args[2],  -- Flag to add to stat progress (within sv_stats.lua)
+				{
+					self = args[2]:Nick(),
+					victim = ply:Nick()
+				}
 			end
-
-			return args[2],  -- Flag to add to stat progress (within sv_stats.lua)
-			{
-				self = args[2]:Nick(),
-				victim = ply:Nick()
-			}
+		end
+	end
+}
+GM.Stats["kill_shield_self"] = {
+	Name = "Shield Kills: %i",
+	Message = "{self} shield bashed themselves",
+	MessageType = "death",
+	Sound = "skyview/announcer/shield_kill.mp3",
+	Score = -500,
+	ProgressIncrement = 1, -- The amount to increment each time this stat tracks
+	ProgressMax = 1, -- The amount of progress required before it is counted as achieved on the player and progress is reset
+	Prerequisite = nil,
+	PrerequisiteTime = 0,
+	OnPlayerDeath = function( self, ply, args )
+		-- Killed them with a shield
+		if ( ( args[2]:GetClass() == "player" ) and ( args[1]:GetClass() == "sky_physprop" ) and args[1].IsShield ) then
+			-- Change message type depending on if it was a self kill or another player kill
+			if ( ply == args[2] ) then
+				return args[2],  -- Flag to add to stat progress (within sv_stats.lua)
+				{
+					self = args[2]:Nick(),
+					victim = ply:Nick()
+				}
+			end
 		end
 	end
 }

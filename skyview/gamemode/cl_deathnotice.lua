@@ -40,14 +40,14 @@ local function RecvPlayerAction( length )
 
 		-- Up pitch and play orchestra hit
 		CurrentOrchPitch = math.Clamp( CurrentOrchPitch + 5, BasePitch, MaxPitch )
-		sound.Play( Sound_OrchestraHit, LocalPlayer():EyePos(), 150, CurrentOrchPitch )
+		sound.Play( Sound_OrchestraHit, LocalPlayer():EyePos(), 150, CurrentOrchPitch, 0.7 )
 		NextPitchDown = CurTime() + 5
 		--surface.PlaySound( "skyview/orch.wav" )
 	end
 
 	if ( string.len( soundfile ) ~= 0 ) then
-		timer.Simple( 0.2, function()
-			--surface.PlaySound( soundfile )
+		timer.Simple( 0.4, function()
+			surface.PlaySound( soundfile )
 		end )
 	end
 end

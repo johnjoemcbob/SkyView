@@ -22,6 +22,7 @@ include("shared.lua") --load shared.lua file
 include( "sh_buff.lua" )
 include( "sh_stats.lua" )
 
+include( "sv_round.lua" )
 include( "sv_buff.lua" )
 include( "sv_stats.lua" )
 //
@@ -399,11 +400,20 @@ function GM:GetFallDamage( ply, speed )
 	if ( ply.Grapple and IsValid( ply.GrappleHook ) and ply.GrappleHook.GrappleAttached ) then
 		return 0
 	end
-	return 10
+	-- High speed impact
+	if ( speed > 700 ) then
+		return 100
+	end
+	return 0
 end
 
 function GM:PlayerDisconnected( ply )
 	RemoveGrapple( ply )
+end
+
+-- Disable the default death sound
+function GM:PlayerDeathSound()
+	return true
 end
 
 function AddGrapple( ply )

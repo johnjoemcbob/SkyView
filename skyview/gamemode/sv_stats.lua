@@ -81,13 +81,7 @@ function GM:EventFired( ply, event, args )
 		local stat = self.Stats[ statname ]
 
 		-- Check stat prerequisites
-		if (
-			stat.Prerequisite and
-			(
-				( not ply.Stats[stat.Prerequisite] ) or
-				( ( CurTime() - ply.Stats[stat.Prerequisite].LastIncrement ) > stat.PrerequisiteTime )
-			)
-		) then
+		if ( not self:EventCheckPrerequisite( ply, stat.Prerequisite, stat.PrerequisiteTime ) ) then
 			continue
 		end
 
@@ -197,6 +191,19 @@ function GM:EventSendMessage( ply, stat, data )
 		) )
 		net.WriteString( stat.Sound or "" )
 	net.Broadcast()
+end
+
+function GM:EventCheckPrerequisite( ply, prerequisite, retime )
+	if (
+		prerequisite and
+		(
+			( not ply.Stats[prerequisite] ) or
+			( ( CurTime() - ply.Stats[prerequisite].LastIncrement ) > retime )
+		)
+	) then
+		return false
+	end
+	return true
 end
 
 hook.Add( "PlayerDeath", "SKY_STAT_PlayerDeath", function( ply, inflictor, attacker )
