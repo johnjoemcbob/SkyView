@@ -30,7 +30,7 @@ include( "sv_stats.lua" )
 
 //Some tables
 //Model Table
-local Models = 
+local Models =
 {
  "models/player/Group01/Female_01.mdl",
  "models/player/Group01/Female_02.mdl",
@@ -125,15 +125,15 @@ function GM:PlayerInitialSpawn(ply)
 	ply:SetModel(table.Random(Models))
 	ply.ShieldMade = false
 	ply.PropCD = 0
-	ply.InAir = false  
-	ply.Jumped = false 
+	ply.InAir = false
+	ply.Jumped = false
 	ply.JumpTime = 0
-	ply.Shield = nil 
+	ply.Shield = nil
 	ply.HasPowerup = false
 	self:PlayerInitialSpawn_Buff( ply )
 	ply.FileID = ply:SteamID():gsub(":", "-")
-	if !SkyView:PlayerExists(ply) then 
-		--player doesn't exist 
+	if !SkyView:PlayerExists(ply) then
+		--player doesn't exist
 		SkyView:ShowFirstScreen(ply) --show them the first screen
 		SkyView:CreatePlayer(ply) --make their player
 	end
@@ -143,7 +143,7 @@ function GM:PlayerSpawn(ply)
 	ply.PropCD = CurTime()+0.2
 	for k, buff in pairs( self.Buffs ) do
 		ply:RemoveBuff( k )
-	end	
+	end
 
 	-- Choose a random colour
 	local col = GAMEMODE.PlayerColours[math.random( 1, #GAMEMODE.PlayerColours)]
@@ -174,13 +174,24 @@ function GM:PostPlayerDeath( ply )
 			otherply.GrappleHook:Attach( data )
 		end
 	end
-	
+
 	-- Remove all buffs and powerups
 	ply.HasPowerup = false
 	for k, buff in pairs( self.Buffs ) do
 		ply:RemoveBuff( k )
-	end	
-	
+	end
+
+  -- Spawn a powerup! -- pick from table of powerups
+  newPowerup = ents.Create("sky_powerup_base")
+  print( newPowerup )
+  newPowerup:SetPos(ply:EyePos() + Vector(0, 0, 50))
+  newPowerup:Spawn()
+  -- Fly away, little one
+  local phys = newPowerup:GetPhysicsObject()
+  if( phys and IsValid(phys)) then
+      phys:SetVelocity(Vector( math.random(-500, 500), math.random(-500, 500), math.random(-500, 500) ))
+  end
+
 end
 
 -- Death stats!
@@ -192,16 +203,16 @@ function GM:PlayerDeath( ply, inflictor, attacker )
 			attacker = inflictor:GetThrownBy()
 			if( attacker == ply ) then
 				-- Suicide by Prop + 1
-				
+
 				-- Check if they grappled themselves a deadly object
 				if ( inflictor.LastGrappledBy == ply ) then
 					PrintMessage( HUD_PRINTTALK, ply:Name() .. " reeled in a big one." )
-					
+
 				-- Check  bounce timer on prop for rebound suicide.
 				elseif (inflictor.RecentlyBounced > 0 and inflictor.TimesBounced > 2 ) then
 					PrintMessage( HUD_PRINTTALK, ply:Name() .. " got a nasty, bouncy, surprise." )
-					
-					
+
+
 				else
 					-- Somehow walked in front of it.
 					PrintMessage( HUD_PRINTTALK, ply:Name() .. " couldn't dodge themselves." )
@@ -210,16 +221,16 @@ function GM:PlayerDeath( ply, inflictor, attacker )
 				-- Someone else threw it
 				-- Check grapple on prop for grapple kill.
 				if( inflictor.LastGrappledBy == attacker ) then
-					PrintMessage( HUD_PRINTTALK, attacker:Name() .. " whiplashed " .. ply:Name() .. "." ) 
-					
+					PrintMessage( HUD_PRINTTALK, attacker:Name() .. " whiplashed " .. ply:Name() .. "." )
+
 				-- Player grappled the attackers prop towards them
 				elseif( inflictor.LastGrappledBy == ply ) then
 					PrintMessage( HUD_PRINTTALK, ply:Name() .. " played " .. attacker:Name() .. "'s claw game and lost. ")
-				
+
 				-- Check bounce timer on prop for rebound kill.
 				elseif( inflictor.RecentlyBounced > 0  and inflictor.TimesBounced > 2 ) then
 					PrintMessage( HUD_PRINTTALK, attacker:Name() .. " played squash with " .. ply:Name() .. "." )
-					
+
 				else
 					-- Normal kill.
 					PrintMessage( HUD_PRINTTALK, attacker:Name() .. " ground " .. ply:Name() .. " into a paste." )
@@ -265,7 +276,7 @@ function GM:KeyPress(ply, key)
 					end
 					prop:SetAngles( fireangle )
 				prop:Spawn()
-				
+
 				-- Throw the prop, setting its owner
 				prop:Throw( throwPos, throwVelocity, ply )
 				prop:SetPropOwner(ply)
@@ -289,7 +300,7 @@ function GM:Think()
 	-- Used to update buffs on players, function located within sv_buff.lua
 	self:Think_Buff()
 
-	for k, ply in pairs( player.GetAll() ) do 
+	for k, ply in pairs( player.GetAll() ) do
 		if ( ply:Alive() ) then
 			-- Run shield think logic
 			self:Think_Shield( ply )
@@ -317,13 +328,13 @@ function GM:Think()
 				RemoveGrapple( ply )
 			elseif ply:KeyDown(IN_JUMP) and ply.InAir and !ply.Jumped then
 				if CurTime() >= ply.JumpTime then
-				 	ply.Jumped = true 
+				 	ply.Jumped = true
 				 	ply:SetVelocity(Vector(0,0,300))
 				 	ply.JumpTime = 0
 					GAMEMODE:EventFired( ply, "PlayerDoubleJump" )
 				end
 			elseif ply:KeyDown(IN_JUMP) and ply:IsOnGround() then
-				if ply.JumpTime == 0 then 
+				if ply.JumpTime == 0 then
 					ply.JumpTime = CurTime()+SkyView.Config.DoubleJumpTime
 				end
 				ply:SetVelocity(Vector(0,0,300))
@@ -331,9 +342,9 @@ function GM:Think()
 				ply.Jumped = false
 				GAMEMODE:EventFired( ply, "PlayerJump" )
 			-- Set ability to normal/double jump if on ground and not grappling
-			elseif ply:OnGround() and ( ( not ply.Grapple ) or ( not ply.GrappleHook ) or ( not IsValid( ply.GrappleHook ) ) or ( not ply.GrappleHook.GrappleAttached) ) then 
-				ply.InAir = false 
-				ply.Jumped = false 
+			elseif ply:OnGround() and ( ( not ply.Grapple ) or ( not ply.GrappleHook ) or ( not IsValid( ply.GrappleHook ) ) or ( not ply.GrappleHook.GrappleAttached) ) then
+				ply.InAir = false
+				ply.Jumped = false
 				ply.JumpTime = 0
 			end
 
@@ -455,6 +466,6 @@ function GM:PlayerHasThisPowerup( ply, powerupnum )
 			return true
 		end
 	end
-	
+
 	return false
 end

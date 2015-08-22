@@ -30,6 +30,7 @@
 -- -	OnTravelOverProp (called when the player is travelling above a prop)
 -- -	OnNearMiss (called from within sky_physprop when a player narrowly avoids it)
 -- -	OnDelayedAcquisition (called when a stat has a delayed check, normally used to see if the player dies soon after)
+-- -  OnPowerupAcquired (called when a player gets a powerup via any means)
 GM.Stats = {}
 
 GM.Stats["nearmiss"] = {
@@ -389,6 +390,30 @@ GM.Stats["grappleoverprop"] = {
 				self = ply:Nick()
 			}
 		end
+	end,
+	OnDelayedAcquisition = function( self, ply )
+		if ( ( ( not ply.Stats["death"] ) or ( ( CurTime() - ply.Stats["death"].LastIncrement ) > 1 ) ) and ply:Alive() ) then
+			return ply  -- Flag to add to stat progress (within sv_stats.lua)
+		end
+	end
+}
+GM.Stats["pickuppowerup"] = {
+	Name = "Picked up %i powerups.",
+	Message = "{self} picked up {powerupname}!",
+	Score = 500,
+	ProgressIncrement = 1,
+	ProgressMax = 1,
+	Prequisite = nil,
+	PrerequisiteTime = 0,
+	Cooldown = 0.1,
+	DelayedAcquisition = 0.0,
+	OnPowerupAcquired = function( self, ply, power )
+		print(GAMEMODE.Buffs[power[2]].Name)
+		return ply,
+		{
+			self = ply:Nick(),
+			powerupname = GAMEMODE.Buffs[power[2]].Name
+		}
 	end,
 	OnDelayedAcquisition = function( self, ply )
 		if ( ( ( not ply.Stats["death"] ) or ( ( CurTime() - ply.Stats["death"].LastIncrement ) > 1 ) ) and ply:Alive() ) then
