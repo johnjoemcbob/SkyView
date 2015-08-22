@@ -1,7 +1,7 @@
 -- Author: Jordan Brown (@DrMelon)
 -- 19/08/2015
 -- Arcade Mode DLC for SkyView - Powerups
--- This is the base for all powerups to inherit from.
+-- This is the homing props powerup!
 
 if SERVER then
 	AddCSLuaFile( "shared.lua" )
@@ -10,11 +10,11 @@ end
 
 ENT.Type = "anim"
 
-ENT.PowerupModel = "models/props_junk/Shoe001a.mdl"
-ENT.PowerupColor = Color( 255, 255, 80, 200 )
-ENT.PowerupScale = 3
+ENT.PowerupModel = "models/weapons/w_missile_closed.mdl"
+ENT.PowerupColor = Color( 255, 127, 0, 200 )
+ENT.PowerupScale = 4
 ENT.PowerupPickupRadius = 60
-ENT.PowerupBuffNumber = 1
+ENT.PowerupBuffNumber = 2
 ENT.RemoveTime = 0
 
 function ENT:Initialize()
@@ -40,7 +40,7 @@ function ENT:Initialize()
 		self:SetModelScale( self.PowerupScale )
 
 		self.RemoveTime = CurTime() + 30
-
+		--self:SetSolid( SOLID_BBOX )
 	end
 
 end
@@ -73,7 +73,7 @@ function ENT:Think()
 		for k, v in pairs( nearbyEnts ) do
 			-- Player grabbed me
 			if( v:IsPlayer() and IsValid(v)) then
-				if ( GAMEMODE:PlayerHasThisPowerup( v, self.PowerupBuffNumber ) == false and v:Alive()) then
+				if ( GAMEMODE:PlayerHasThisPowerup( v, self.PowerupBuffNumber ) == false and v:Alive() ) then
 					v:AddBuff( self.PowerupBuffNumber )
 					self:Remove()
 					GAMEMODE:EventFired( v, "PowerupAcquired", { self, self.PowerupBuffNumber } )
@@ -83,7 +83,7 @@ function ENT:Think()
 			if( v:GetClass() == "sky_grapple" and IsValid(v)) then
 				local grappleplayer = v.Owner
 				if(grappleplayer and grappleplayer:IsPlayer() and IsValid(grappleplayer)) then
-					if( GAMEMODE:PlayerHasThisPowerup( grappleplayer, self.PowerupBuffNumber ) == false and grappleplayer:Alive()) then
+					if( GAMEMODE:PlayerHasThisPowerup( grappleplayer, self.PowerupBuffNumber ) == false and grappleplayer:Alive() ) then
 						grappleplayer:AddBuff( self.PowerupBuffNumber )
 						self:Remove()
 						GAMEMODE:EventFired( grappleplayer, "PowerupAcquired", { self,self.PowerupBuffNumber } )
