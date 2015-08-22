@@ -26,6 +26,8 @@ ENT.NearPlayers = nil
 ENT.CollidedPlayers = nil
 ENT.LastBounce = 0
 ENT.BetweenBounceTime = 1
+ENT.IsHoming = false
+ENT.HomingTarget = nil
 --ENT.JustThrown = 0
 --ENT.Owner = nil
 
@@ -61,7 +63,7 @@ function ENT:Initialize()
 		if ( self:GetModel() == "models/error.mdl" ) then
 			self:SetModel(table.Random(PropModels))
 		end
-		self:PhysicsInit( SOLID_VPHYSICS )	
+		self:PhysicsInit( SOLID_VPHYSICS )
 		--self:PhysWake()
 
 		self.RemoveTime = CurTime() + SkyView.Config.RemovePropTime
@@ -77,6 +79,8 @@ function ENT:Initialize()
 
 	self.NearPlayers = {}
 	self.CollidedPlayers = {}
+	self.IsHoming = false
+	self.HomingTarget = false
 end
 
 function ENT:SetupDataTables()
@@ -88,13 +92,16 @@ function ENT:SetupDataTables()
 end
 
 function ENT:Think()
-	if( SERVER ) then 
+	if( SERVER ) then
+		-- Apply homing logic
+		self:HomeIn()
+
 		-- Tick down recently bounced timer.
 		self.RecentlyBounced = self.RecentlyBounced - 1
 		if(self.RecentlyBounced < 0) then
 			self.RecentlyBounced = 0
 		end
-		
+
 		-- Tick down just-thrown timer
 		self:SetJustThrown(math.max(self:GetJustThrown() - 100 * FrameTime(),0))
 
@@ -155,7 +162,7 @@ function ENT:ReflectVector( vec, normal, bounce )
 end
 
 function ENT:PhysicsCollide( colData, collider )
-	if( SERVER ) then 
+	if( SERVER ) then
 		-- Make em bouncy
 		local hitEnt = colData.HitEntity
 
@@ -163,7 +170,7 @@ function ENT:PhysicsCollide( colData, collider )
 
 		local phys = self:GetPhysicsObject()
 		if ( phys and IsValid( phys ) ) then
-			if(!hitEnt:IsWorld() and !string.find(hitEnt:GetClass(), "func")) then 
+			if(!hitEnt:IsWorld() and !string.find(hitEnt:GetClass(), "func")) then
 				if (hitEnt.MeShield) then
 					hitEnt:EmitSound(SkyView:RandomShieldSound())
 					-- Get velocity based on the shield angles
@@ -184,7 +191,7 @@ function ENT:PhysicsCollide( colData, collider )
 			self.CollidedPlayers[hitEnt:EntIndex()] = CurTime()
 		end
 
-		-- Stats	
+		-- Stats
 		if(colData.Speed > 50) then
 			self.TimesBounced = self.TimesBounced + 1
 			self.RecentlyBounced = 60 -- engage bounce timer.
@@ -203,11 +210,46 @@ function ENT:OnRemove()
 
 end
 
+function ENT:HomeIn()
+	if(self.IsHoming == false) then
+		return
+	end
+	-- Apply force towards stored target
+	if(self.HomingTarget and IsValid(self.HomingTarget) and self.HomingTarget:Alive()) then
+		local flightVector = self.HomingTarget:GetPos() - self:GetPos()
+		flightVector:Normalize()
+		flightVector = flightVector * 2000
+		local phys = self:GetPhysicsObject()
+		if ( phys and IsValid( phys ) ) then
+			phys:SetVelocity(phys:GetVelocity() + flightVector)
+		end
+	else -- Try to find a target
+		local nearbyEnts = ents.FindInSphere(self:GetPos(), 350)
+		for k, v in pairs(nearbyEnts) do
+			if(v != nil and IsValid(v) and v:IsPlayer() and v != self:GetThrownBy() and v:Alive()) then
+				self.HomingTarget = v
+				-- Beep
+				self:EmitSound("npc/roller/mine/rmine_tossed1.wav")
+			end
+		end
+	end
+end
+
 function ENT:Throw( from, velocity, owner )
 	self:SetPos( from )
 	self:GetPhysicsObject():SetVelocity( velocity )
 	if( owner != nil and IsValid(owner)) then
 		self:SetThrownBy(owner)
+
+		if(owner.HasPowerup and owner:GetBuff(2) != nil) then
+			-- Check to see if they have homing prop buff
+			self.IsHoming = true
+			self.HomingTarget = nil
+			-- Add trail, same colour as the player
+			local playercol = owner:GetPlayerColor()
+			util.SpriteTrail( self, 0, Color( playercol.x * 255, playercol.y * 255, playercol.z * 255 ), true, 15, 5, 3.5, 1 / 20 * 0.5, "trails/smoke.vmt" )
+
+		end
 	end
 	self:SetJustThrown(1)
 end

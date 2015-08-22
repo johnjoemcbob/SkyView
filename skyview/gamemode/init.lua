@@ -87,6 +87,13 @@ local ShieldHitSounds =
 }
 //
 
+-- Powerups to choose from
+local PowerupChoices =
+{
+  "sky_powerup_base",
+  "sky_powerup_homing"
+}
+
 //SkyView Functions
 
 function SkyView:PlayerExists(ply) --check if player exists
@@ -177,16 +184,19 @@ function GM:PostPlayerDeath( ply )
 	end
 
   -- Spawn a powerup! -- pick from table of powerups
-  newPowerup = ents.Create("sky_powerup_base")
-  print( newPowerup )
-  newPowerup:SetPos(ply:EyePos() + Vector(0, 0, 50))
-  newPowerup:Spawn()
-  -- Fly away, little one
-  local phys = newPowerup:GetPhysicsObject()
-  if( phys and IsValid(phys)) then
-      phys:SetVelocity(Vector( math.random(-500, 500), math.random(-500, 500), math.random(-500, 500) ))
-  end
+  local pickupchance = math.random(0, 100)
+  print(pickupchance)
+  if(pickupchance > 70) then --30% chance
+    newPowerup = ents.Create(table.Random(PowerupChoices))
 
+    newPowerup:SetPos(ply:EyePos() + Vector(0, 0, 50))
+    newPowerup:Spawn()
+    -- Fly away, little one
+    local phys = newPowerup:GetPhysicsObject()
+    if( phys and IsValid(phys)) then
+        phys:SetVelocity(Vector( math.random(-500, 500), math.random(-500, 500), math.random(-500, 500) ))
+    end
+  end
 end
 
 -- Death stats!
