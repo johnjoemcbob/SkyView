@@ -115,11 +115,13 @@ resource.AddFile( "sound/skyview/orch.wav" )
 function GM:PlayerInitialSpawn(ply)
 	-- Found in sv_stats.lua
 	self:PlayerInitialSpawn_Stats( ply )
+	-- Found in sv_round.lua
+	self:PlayerInitialSpawn_Round( ply )
 
 	if SkyView.Config.FirstPerson then
     	ply:SetWalkSpeed(700)
         ply:SetRunSpeed(600)
-        ply:SetJumpPower(0)
+        ply:SetJumpPower(400)
         ply:SetGravity(1.1)
        end
 	ply:SetModel(table.Random(Models))
@@ -144,14 +146,7 @@ function GM:PlayerSpawn(ply)
 	for k, buff in pairs( self.Buffs ) do
 		ply:RemoveBuff( k )
 	end
-
-	-- Choose a random colour
-	local col = GAMEMODE.PlayerColours[math.random( 1, #GAMEMODE.PlayerColours)]
-		col = Vector( col.r / 255, col.g / 255, col.b / 255 )
-	ply:SetPlayerColor( col )
 end
-
-
 
 function GM:PostPlayerDeath( ply )
 	-- Remove and grapples when the player dies
@@ -249,6 +244,9 @@ function GM:PlayerDeath( ply, inflictor, attacker )
 end
 
 function GM:KeyPress(ply, key)
+	-- Found in sv_round.lua
+	self:KeyPress_Round( ply, key )
+
 	if ply:Alive() then
 		if key == IN_USE then
 			AddGrapple( ply )
@@ -326,26 +324,30 @@ function GM:Think()
 				end
 				-- Remove the hook
 				RemoveGrapple( ply )
-			elseif ply:KeyDown(IN_JUMP) and ply.InAir and !ply.Jumped then
-				if CurTime() >= ply.JumpTime then
+			elseif ply:KeyDown(IN_JUMP) and !ply.Jumped then
+				-- Stat track the normal jump
+				if ply.JumpTime == 0 then
+					ply.JumpTime = CurTime()+SkyView.Config.DoubleJumpTime
+					--ply:SetVelocity(Vector(0,0,300))
+					ply.InAir = true
+					ply.Jumped = false
+					GAMEMODE:EventFired( ply, "PlayerJump" )
+				end
+
+				-- Stat track and control the double jump
+				if ( ply.InAir and ( CurTime() >= ply.JumpTime ) ) then
 				 	ply.Jumped = true
 				 	ply:SetVelocity(Vector(0,0,300))
 				 	ply.JumpTime = 0
 					GAMEMODE:EventFired( ply, "PlayerDoubleJump" )
 				end
-			elseif ply:KeyDown(IN_JUMP) and ply:IsOnGround() then
-				if ply.JumpTime == 0 then
-					ply.JumpTime = CurTime()+SkyView.Config.DoubleJumpTime
-				end
-				ply:SetVelocity(Vector(0,0,300))
-				ply.InAir = true
-				ply.Jumped = false
-				GAMEMODE:EventFired( ply, "PlayerJump" )
 			-- Set ability to normal/double jump if on ground and not grappling
 			elseif ply:OnGround() and ( ( not ply.Grapple ) or ( not ply.GrappleHook ) or ( not IsValid( ply.GrappleHook ) ) or ( not ply.GrappleHook.GrappleAttached) ) then
 				ply.InAir = false
 				ply.Jumped = false
 				ply.JumpTime = 0
+			elseif ( not ply:OnGround() ) then
+				ply.InAir = true
 			end
 
 			-- Pass over props

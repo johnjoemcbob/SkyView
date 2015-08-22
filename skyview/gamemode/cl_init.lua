@@ -168,7 +168,7 @@ function GM:HUDPaint()
 
 	-- Find the required width for the score text
 	local font = "skyview_scorefont"
-	local text = LocalPlayer():Frags()
+	local text = LocalPlayer():GetNWInt( "sky_score" )
 	if ( text ~= LastDisplayedScore ) then
 		ScoreShake = 100
 		LastDisplayedScore = text
@@ -177,7 +177,9 @@ function GM:HUDPaint()
 	end
 
 	-- Display the score text
-	draw.TextRotated( text, x, y, Color( 255, 255, 255 ), font, math.sin( CurTime() * ScoreShake ) * 30 )
+	local col = LocalPlayer():GetPlayerColor()
+		col = Color( col.x * 255, col.y * 255, col.z * 255 )
+	draw.TextRotated( text, x, y, col, font, math.sin( CurTime() * ScoreShake ) * 30 )
 end
 
 function GM:RenderScreenspaceEffects()

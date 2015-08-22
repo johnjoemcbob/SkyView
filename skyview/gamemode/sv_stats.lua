@@ -156,7 +156,7 @@ function GM:EventAcquisition( ply, statname, stat )
 		ply.Stats[statname].TotalIncrements = ply.Stats[statname].TotalIncrements + 1
 
 		-- Increment player score
-		ply:SetFrags( ply:Frags() + stat.Score )
+		ply:SetNWInt( "sky_score", ply:GetNWInt( "sky_score" ) + stat.Score )
 
 		return true
 	end

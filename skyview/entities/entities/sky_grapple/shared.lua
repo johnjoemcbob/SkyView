@@ -19,6 +19,9 @@ ENT.Direction = Vector( 0, 0, 0 )
 -- and the player should begin reeling in
 ENT.GrappleAttached = false
 
+-- The time at which the grapple attached to something
+ENT.GrappleStartTime = 0
+
 -- The speed at which to shoot out the hook
 ENT.CastSpeed = 1500 * 500
 
@@ -166,8 +169,17 @@ function ENT:Think()
 		local direction, distance
 		-- Moving object
 			if ( ( grappletype == "Player" ) or ( grappletype == "Entity" ) ) then
-				-- Remove the grapple from the player if it is dead
-				if ( ( grappletype == "Player" ) and ( not self.GrappleAttached:Alive() ) ) then
+				-- Remove the grapple from the player if it is dead, or has been dead recently
+				if (
+					( grappletype == "Player" ) and -- Is a player
+					(
+						( not self.GrappleAttached:Alive() ) or -- Is dead
+						(
+							self.GrappleAttached.Stats["death"] and -- Has died
+							( self.GrappleAttached.Stats["death"].LastIncrement >= self.GrappleStartTime ) -- Died after they were grappled
+						)-- Hasn't been dead since grappled
+					)
+				) then
 					self:HookRemove()
 					return
 				end
@@ -297,6 +309,7 @@ function ENT:Attach( trace )
 
 	-- Flag as attached to something
 	self.GrappleAttached = trace.HitPos
+	self.GrappleStartTime = CurTime()
 
 	-- Disable gravity on the player
 	self.Owner:SetGravity( 0 )
