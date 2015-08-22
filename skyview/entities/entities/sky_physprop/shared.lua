@@ -229,7 +229,7 @@ function ENT:HomeIn()
 			if(v != nil and IsValid(v) and v:IsPlayer() and v != self:GetThrownBy() and v:Alive()) then
 				self.HomingTarget = v
 				-- Beep
-				self:EmitSound("npc/roller/mine/rmine_tossed1.wav")
+				self:EmitSound("npc/roller/mine/rmine_tossed1.wav", 140)
 			end
 		end
 	end
