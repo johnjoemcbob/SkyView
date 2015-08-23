@@ -108,11 +108,9 @@ function ENT:Think()
 		-- Apply homing logic
 		self:HomeIn()
 
-		-- Angle if Saw
+		-- Nocollide with owner if saw
 		if(self.IsSaw) then
-			--local keepVel = self:GetPhysicsObject():GetVelocity()
-			--self:SetAngles(self:GetPhysicsObject():GetVelocity():Angle())
-			--self:GetPhysicsObject():SetVelocity(keepVel)
+			self:SetJustThrown(10)
 		end
 
 		-- Tick down recently bounced timer.
