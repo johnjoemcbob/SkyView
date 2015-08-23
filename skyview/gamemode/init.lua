@@ -91,7 +91,8 @@ local ShieldHitSounds =
 local PowerupChoices =
 {
   "sky_powerup_base",
-  "sky_powerup_homing"
+  "sky_powerup_homing",
+  "sky_powerup_sawmerang"
 }
 
 //SkyView Functions
@@ -185,7 +186,6 @@ function GM:PostPlayerDeath( ply )
 
   -- Spawn a powerup! -- pick from table of powerups
   local pickupchance = math.random(0, 100)
-  print(pickupchance)
   if(pickupchance > 70) then --30% chance
     newPowerup = ents.Create(table.Random(PowerupChoices))
 
@@ -283,6 +283,15 @@ function GM:KeyPress(ply, key)
 						--Why we did the thing above? Because when we're in the sky view, we can't aim where we shoot.
 					end
 					prop:SetAngles( fireangle )
+
+          -- SAWMERANG
+          if(ply:GetBuff(3) != nil) then
+            prop:SetModel("models/props_junk/sawblade001a.mdl")
+            prop:SetModelScale(2)
+            prop:SetColor(Color( 80, 255, 255, 200 ))
+            prop:SetMaterial("models/debug/debugwhite")
+          end
+
 				prop:Spawn()
 
 				-- Throw the prop, setting its owner
