@@ -110,7 +110,7 @@ function ENT:Think()
 
 		-- Nocollide with owner if saw
 		if(self.IsSaw) then
-			self:SetJustThrown(10)
+			self:SetJustThrown(100000)
 		end
 
 		-- Tick down recently bounced timer.
