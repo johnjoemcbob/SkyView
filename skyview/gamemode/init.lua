@@ -265,6 +265,7 @@ function GM:KeyPress(ply, key)
 		end
 		if key == IN_ATTACK and !ply.ShieldMade and !ply.Grapple then
 			if ply.PropCD == 0 or ply.PropCD > 0 and CurTime() >= ply.PropCD then
+				print( ply:Nick().." fired prop" )
 				local prop = ents.Create("sky_physprop")
 					local pos = ply:GetPos()
 					local fireangle = ply:EyeAngles()
@@ -282,6 +283,7 @@ function GM:KeyPress(ply, key)
 						throwVelocity = ( ply:GetForward() * 2000 + ply:GetVelocity() )
 						--Why we did the thing above? Because when we're in the sky view, we can't aim where we shoot.
 					end
+					prop:SetPos( throwPos )
 					prop:SetAngles( fireangle )
 				prop:Spawn()
 
@@ -383,6 +385,7 @@ end
 function GM:Think_Shield( ply )
 	if ( ply:KeyDown( IN_ATTACK2 ) ) then
 		if ( not ply.ShieldMade ) then
+			print( ply:Nick().." createdshield" )
 			ply.ShieldMade = true
 
 			-- Spawn the shield

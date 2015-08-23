@@ -133,6 +133,7 @@ function GM:EventFired( ply, event, args )
 end
 
 function GM:EventAcquisition( ply, statname, stat )
+	print( ply:Nick().." got "..statname )
 	if ( not ply.Stats[statname] ) then
 		ply.Stats[statname] = {
 			Progress = 0,

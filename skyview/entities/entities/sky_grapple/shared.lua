@@ -254,6 +254,12 @@ function ENT:Think()
 end
 
 function ENT:PhysicsCollide( data, phys )
+	print( "GRAPPLE COLLISION---" )
+	PrintTable( data )
+	print( phys )
+	print( "Valid?: "..tostring(IsValid( phys )) )
+	print( "GRAPPLE COLLISION---/end" )
+
 	local entity
 	local hitpos = data.HitPos
 	local mattype = MAT_GRASS

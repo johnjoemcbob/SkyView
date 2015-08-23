@@ -60,16 +60,36 @@ local PropModels =
 function ENT:Initialize()
 	-- Set up physics
 	if ( SERVER ) then
+		print( self:GetPos() )
+		print( self:IsInWorld() )
+		if ( not self:IsInWorld() ) then
+			print( "REMOVED IN WORLD" )
+			print( "REMOVED IN WORLD" )
+			print( "REMOVED IN WORLD" )
+			print( "REMOVED IN WORLD" )
+			print( "REMOVED IN WORLD" )
+			print( "REMOVED IN WORLD" )
+			print( "REMOVED IN WORLD" )
+			print( "REMOVED IN WORLD" )
+			print( "REMOVED IN WORLD" )
+			print( "REMOVED IN WORLD" )
+			self:Remove()
+			return
+		end
+
 		if ( self:GetModel() == "models/error.mdl" ) then
 			self:SetModel(table.Random(PropModels))
+			print( self:GetModel() )
 		end
 		self:PhysicsInit( SOLID_VPHYSICS )
+		print( "inited physics" )
 		--self:PhysWake()
 
 		self.RemoveTime = CurTime() + SkyView.Config.RemovePropTime
 
 		local phys = self:GetPhysicsObject()
 		if ( phys and IsValid( phys ) ) then
+			print( "physics is valid" )
 			phys:EnableDrag( false )
 			--phys:Wake()
 		end
@@ -81,6 +101,8 @@ function ENT:Initialize()
 	self.CollidedPlayers = {}
 	self.IsHoming = false
 	self.HomingTarget = false
+
+	print( "end init" )
 end
 
 function ENT:SetupDataTables()
@@ -93,7 +115,23 @@ end
 
 function ENT:Think()
 	if( SERVER ) then
+		if ( not self:IsInWorld() ) then
+			print( "REMOVED IN WORLD" )
+			print( "REMOVED IN WORLD" )
+			print( "REMOVED IN WORLD" )
+			print( "REMOVED IN WORLD" )
+			print( "REMOVED IN WORLD" )
+			print( "REMOVED IN WORLD" )
+			print( "REMOVED IN WORLD" )
+			print( "REMOVED IN WORLD" )
+			print( "REMOVED IN WORLD" )
+			print( "REMOVED IN WORLD" )
+			self:Remove()
+			return
+		end
+
 		-- Apply homing logic
+		print( "HOME IN" )
 		self:HomeIn()
 
 		-- Tick down recently bounced timer.
@@ -107,13 +145,16 @@ function ENT:Think()
 
 		-- Tick down until removal of the prop
 		if ( CurTime() > self.RemoveTime ) then
+			print( "REMOVING PROP, TIMEOUT" )
 			self:Remove()
+			return
 		end
 
 		-- Near miss logic;
 		-- Find near by players and flag them for collision checking, if they collide within a certain time (either before or after)
 		-- then they are removed from the near miss tracking; otherwise the stat is incremented and a message displayed
 		if ( not self.IsActiveShield ) then
+			print( "NEAR MISS LOGIC" )
 			local nearents = ents.FindInSphere( self:GetPos(), self.NearMissRadius )
 			for k, ent in pairs( nearents ) do
 				if ( ent:IsPlayer() ) then
@@ -154,6 +195,10 @@ function ENT:Think()
 				end
 			end
 		end
+		print( "THINK END" )
+
+		self:NextThink( CurTime() )
+		return true
 	end
 end
 
@@ -162,6 +207,15 @@ function ENT:ReflectVector( vec, normal, bounce )
 end
 
 function ENT:PhysicsCollide( colData, collider )
+	print( "PROP COLLISION---" )
+	PrintTable( colData )
+	print( collider )
+	print( "Valid?: "..tostring(IsValid( collider )) )
+	print( "Shield?: "..tostring(self.IsShield) )
+	print( "ActiveShield?: "..tostring(self.IsActiveShield) )
+	print( "Model: "..tostring(self:GetModel()) )
+	print( "PROP COLLISION---/end" )
+
 	if( SERVER ) then
 		-- Make em bouncy
 		local hitEnt = colData.HitEntity
@@ -171,16 +225,18 @@ function ENT:PhysicsCollide( colData, collider )
 		local phys = self:GetPhysicsObject()
 		if ( phys and IsValid( phys ) ) then
 			if(!hitEnt:IsWorld() and !string.find(hitEnt:GetClass(), "func")) then
-				if (hitEnt.MeShield) then
+				if ( hitEnt.IsShield ) then
+					print( "BOUNCE SHIELD" )
 					hitEnt:EmitSound(SkyView:RandomShieldSound())
 					-- Get velocity based on the shield angles
 					local bounceVel = self:GetAngles():Forward() * -10000
-					phys:SetVelocity(bounceVel)
+					phys:SetVelocityInstantaneous(bounceVel)
 				end
-			elseif(hitEnt:IsWorld() or string.find(hitEnt:GetClass(), "func")) then
+			elseif ( hitEnt:IsWorld() or string.find( hitEnt:GetClass(), "func" ) ) then
 				-- In an attempt to stop physics crashes, props can only bounce every so often
 				if ( CurTime() >= self.LastBounce ) then
-					phys:SetVelocity(bounceVel)
+					print( "BOUNCE" )
+					phys:SetVelocityInstantaneous(bounceVel)
 					self.LastBounce = CurTime() + self.BetweenBounceTime
 				end
 			end
@@ -212,18 +268,21 @@ end
 
 function ENT:HomeIn()
 	if(self.IsHoming == false) then
+		print( "NOT HOMING" )
 		return
 	end
 	-- Apply force towards stored target
 	if(self.HomingTarget and IsValid(self.HomingTarget) and self.HomingTarget:Alive()) then
+		print( "HOMING; HUNTING TARGET" )
 		local flightVector = self.HomingTarget:GetPos() - self:GetPos()
 		flightVector:Normalize()
 		flightVector = flightVector * 2000
 		local phys = self:GetPhysicsObject()
 		if ( phys and IsValid( phys ) ) then
-			phys:SetVelocity(phys:GetVelocity() + flightVector)
+			phys:SetVelocityInstantaneous(phys:GetVelocity() + flightVector)
 		end
 	else -- Try to find a target
+		print( "HOMING; FINDING TARGET" )
 		local nearbyEnts = ents.FindInSphere(self:GetPos(), 350)
 		for k, v in pairs(nearbyEnts) do
 			if(v != nil and IsValid(v) and v:IsPlayer() and v != self:GetThrownBy() and v:Alive()) then
@@ -236,9 +295,22 @@ function ENT:HomeIn()
 end
 
 function ENT:Throw( from, velocity, owner )
+	if ( ( not self ) or ( not IsValid( self ) ) ) then return end
+
+	print( "throw" )
+	print( "from;" )
+	print( from )
+	print( "with velocity;" )
+	print( velocity )
+	print( "and owner;" )
+	print( owner )
 	self:SetPos( from )
-	self:GetPhysicsObject():SetVelocity( velocity )
+	local phys = self:GetPhysicsObject()
+	if ( phys and IsValid( phys ) ) then
+		phys:SetVelocityInstantaneous( velocity )
+	end
 	if( owner != nil and IsValid(owner)) then
+		print( "owner is valid" )
 		self:SetThrownBy(owner)
 
 		if(owner.HasPowerup and owner:GetBuff(2) != nil) then

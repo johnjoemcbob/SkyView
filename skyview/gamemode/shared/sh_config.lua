@@ -19,7 +19,7 @@ SkyView.Config.DoubleJumpTime = 0.3 --Set how long the player can double jump af
 --[[
 	The lower this is, the quicker players will be able to double jump
 --]]
-SkyView.Config.PropSpawnCoolDown = 1 --Set how long until a player can spawn another prop
+SkyView.Config.PropSpawnCoolDown = 0.5 --Set how long until a player can spawn another prop
 --[[
 	For more chaos, decrease this variable
 --]]

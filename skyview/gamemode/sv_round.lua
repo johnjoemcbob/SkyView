@@ -2,7 +2,25 @@
 -- 22/08/15
 -- Round system
 
+GM.RoundStates = {
+	Begin = 1,
+	Progress = 2,
+	End = 3
+}
+GM.CurrentRoundState = 1
+
 function GM:PlayerInitialSpawn_Round( ply )
+	-- First player to join, start round
+	if ( self.CurrentRoundState == self.RoundStates.Begin ) then
+		self:RoundStart()
+		return
+	-- Only player on the server, reset and start
+	elseif ( ( #player.GetAll() ) <= 2 ) then
+		self:RoundReset()
+		self:RoundStart()
+		return
+	end
+
 	-- Any new joining players should not spawn mid round
 	ply:SetDeaths( SkyView.Config.MaxLivesPerPlayer )
 
@@ -13,6 +31,8 @@ function GM:PlayerInitialSpawn_Round( ply )
 end
 
 function GM:RoundStart()
+	self.CurrentRoundState = self.RoundStates.Progress
+
 	for k, ply in pairs( player.GetAll() ) do
 		-- Choose a random colour
 		local col = GAMEMODE.PlayerColours[math.random( 1, #GAMEMODE.PlayerColours)]
@@ -22,6 +42,8 @@ function GM:RoundStart()
 end
 
 function GM:RoundEnd()
+	self.CurrentRoundState = self.RoundStates.End
+
 	-- Timer to reset the round and then start a new one
 	timer.Simple( 5, function()
 		GAMEMODE:RoundReset()
@@ -92,7 +114,7 @@ hook.Add( "PlayerDeath", "SKY_Round_PlayerDeath", function()
 				playersleft = playersleft + 1
 			end
 		end
-	if ( playersleft <= 1 ) then
+	if ( ( #player.GetAll() > 1 ) and ( playersleft <= 1 ) ) then
 		GAMEMODE:RoundEnd()
 	end
 end )
