@@ -139,7 +139,6 @@ function GM:PlayerInitialSpawn(ply)
 	ply.Jumped = false
 	ply.JumpTime = 0
 	ply.Shield = nil
-	ply.HasPowerup = false
 	self:PlayerInitialSpawn_Buff( ply )
 	ply.FileID = ply:SteamID():gsub(":", "-")
 	if !SkyView:PlayerExists(ply) then
@@ -179,7 +178,6 @@ function GM:PostPlayerDeath( ply )
 	end
 
 	-- Remove all buffs and powerups
-	ply.HasPowerup = false
 	for k, buff in pairs( self.Buffs ) do
 		ply:RemoveBuff( k )
 	end
