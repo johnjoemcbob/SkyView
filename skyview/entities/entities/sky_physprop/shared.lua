@@ -28,8 +28,19 @@ ENT.LastBounce = 0
 ENT.BetweenBounceTime = 1
 ENT.IsHoming = false
 ENT.HomingTarget = nil
+ENT.IsSaw = false
 --ENT.JustThrown = 0
 --ENT.Owner = nil
+
+-- Saw sound
+sound.Add( {
+	name = "saw_travel",
+	channel = CHAN_STATIC,
+	volume = 1.0,
+	level = 80,
+	pitch = { 150, 170 },
+	sound = "ambient/machines/spin_loop.wav"
+} )
 
 -- Prop Models Table
 local PropModels =
@@ -101,6 +112,7 @@ function ENT:Initialize()
 	self.CollidedPlayers = {}
 	self.IsHoming = false
 	self.HomingTarget = false
+	self.IsSaw = false
 
 	print( "end init" )
 end
@@ -134,6 +146,11 @@ function ENT:Think()
 		print( "HOME IN" )
 		self:HomeIn()
 
+		-- Nocollide with owner if saw
+		if(self.IsSaw) then
+			self:SetJustThrown( 100000 )
+		end
+
 		-- Tick down recently bounced timer.
 		self.RecentlyBounced = self.RecentlyBounced - 1
 		if(self.RecentlyBounced < 0) then
@@ -146,6 +163,7 @@ function ENT:Think()
 		-- Tick down until removal of the prop
 		if ( CurTime() > self.RemoveTime ) then
 			print( "REMOVING PROP, TIMEOUT" )
+			self:StopSound("saw_travel")
 			self:Remove()
 			return
 		end
@@ -291,9 +309,16 @@ function ENT:PhysicsCollide( colData, collider )
 			end
 		end
 
+		if ( self.IsSaw ) then
+			self:EmitSound("npc/manhack/grind".. math.random(1,5) ..".wav")
+		end
+
 		-- Near miss logic
 		if ( hitEnt:IsPlayer() ) then
 			self.CollidedPlayers[hitEnt:EntIndex()] = CurTime()
+			if ( self.IsSaw ) then
+				self:EmitSound("npc/manhack/grind_flesh1.wav", 120)
+			end
 		end
 
 		-- Stats
@@ -316,6 +341,17 @@ function ENT:OnRemove()
 end
 
 function ENT:HomeIn()
+	-- Make the sawmerang come back
+	if(self.IsSaw == true and self:GetPos():Distance(self:GetThrownBy():GetPos()) > 1450) then
+		local flightVector = (self:GetThrownBy():GetPos() + self:GetThrownBy():GetAngles():Up() * 80) - self:GetPos()
+		flightVector:Normalize()
+		flightVector = flightVector * 1000
+		local phys = self:GetPhysicsObject()
+		if ( phys and IsValid( phys ) ) then
+			phys:SetVelocity(phys:GetVelocity() + flightVector)
+		end
+	end
+
 	if(self.IsHoming == false) then
 		print( "NOT HOMING" )
 		return
@@ -369,7 +405,12 @@ function ENT:Throw( from, velocity, owner )
 			-- Add trail, same colour as the player
 			local playercol = owner:GetPlayerColor()
 			util.SpriteTrail( self, 0, Color( playercol.x * 255, playercol.y * 255, playercol.z * 255 ), true, 15, 5, 3.5, 1 / 20 * 0.5, "trails/smoke.vmt" )
-
+		end
+		if(owner.HasPowerup and owner:GetBuff(3) != nil) then
+			self.IsSaw = true
+			self:EmitSound("saw_travel", 75, 180)
+			util.SpriteTrail( self, 0, Color( 255, 255, 255 ), true, 15, 5, 3.5, 1 / 20 * 0.5, "trails/laser.vmt" )
+			self:GetPhysicsObject():EnableGravity(false)
 		end
 	end
 	self:SetJustThrown(1)
