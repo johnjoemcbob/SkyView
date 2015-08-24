@@ -44,7 +44,6 @@ table.insert(
 			GAMEMODE:SetPlayerSpeed(ply, 1800, 1700)
 			-- Play speedup noise
 			ply:EmitSound("weapons/physcannon/physcannon_charge.wav", 75, 160, 1, CHAN_AUTO)
-			ply.HasPowerup = true
 		end,
 		Think = function( self, ply )
 
@@ -53,7 +52,6 @@ table.insert(
 			GAMEMODE:SetPlayerSpeed(ply, 700, 600)
 			-- Play slowdown noise
 			ply:EmitSound("npc/manhack/bat_away.wav", 75, 75, 1, CHAN_AUTO)
-			ply.HasPowerup = false
 		end
 	}
 	)
@@ -72,7 +70,6 @@ table.insert(
 		Init = function( self, ply )
 			-- Play speedup noise
 			ply:EmitSound("weapons/physcannon/physcannon_charge.wav", 75, 160, 1, CHAN_AUTO)
-			ply.HasPowerup = true
 		end,
 		Think = function( self, ply )
 
@@ -80,7 +77,6 @@ table.insert(
 		Remove = function( self, ply )
 			-- Play slowdown noise
 			ply:EmitSound("npc/manhack/bat_away.wav", 75, 75, 1, CHAN_AUTO)
-			ply.HasPowerup = false
 		end
 	}
 )
@@ -99,7 +95,6 @@ table.insert(
 		Init = function( self, ply )
 			-- Play speedup noise
 			ply:EmitSound("ambient/machines/slicer1.wav", 75, 160, 1, CHAN_AUTO)
-			ply.HasPowerup = true
 		end,
 		Think = function( self, ply )
 
@@ -107,7 +102,6 @@ table.insert(
 		Remove = function( self, ply )
 			-- Play slowdown noise
 			ply:EmitSound("npc/manhack/bat_away.wav", 75, 75, 1, CHAN_AUTO)
-			ply.HasPowerup = false
 		end
 	}
 )

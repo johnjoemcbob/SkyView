@@ -398,7 +398,7 @@ function ENT:Throw( from, velocity, owner )
 		print( "owner is valid" )
 		self:SetThrownBy(owner)
 
-		if(owner.HasPowerup and owner:GetBuff(2) != nil) then
+		if(owner:GetBuff(2) != nil) then
 			-- Check to see if they have homing prop buff
 			self.IsHoming = true
 			self.HomingTarget = nil
@@ -406,7 +406,7 @@ function ENT:Throw( from, velocity, owner )
 			local playercol = owner:GetPlayerColor()
 			util.SpriteTrail( self, 0, Color( playercol.x * 255, playercol.y * 255, playercol.z * 255 ), true, 15, 5, 3.5, 1 / 20 * 0.5, "trails/smoke.vmt" )
 		end
-		if(owner.HasPowerup and owner:GetBuff(3) != nil) then
+		if(owner:GetBuff(3) != nil) then
 			self.IsSaw = true
 			self:EmitSound("saw_travel", 75, 180)
 			util.SpriteTrail( self, 0, Color( 255, 255, 255 ), true, 15, 5, 3.5, 1 / 20 * 0.5, "trails/laser.vmt" )
