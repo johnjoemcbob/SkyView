@@ -84,3 +84,30 @@ table.insert(
 		end
 	}
 )
+table.insert(
+	GM.Buffs,
+	{
+		Name = "Sawmerang",
+		Description = "YOU HAVE THE POWER OF THE SAWMERANG",
+		Icon = "icon16/lightning.png",
+		Time = 30,
+		Debuff = false,
+
+		ThinkActivate = function( self, ply )
+
+		end,
+		Init = function( self, ply )
+			-- Play speedup noise
+			ply:EmitSound("ambient/machines/slicer1.wav", 75, 160, 1, CHAN_AUTO)
+			ply.HasPowerup = true
+		end,
+		Think = function( self, ply )
+
+		end,
+		Remove = function( self, ply )
+			-- Play slowdown noise
+			ply:EmitSound("npc/manhack/bat_away.wav", 75, 75, 1, CHAN_AUTO)
+			ply.HasPowerup = false
+		end
+	}
+)

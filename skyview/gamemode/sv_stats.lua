@@ -223,6 +223,9 @@ hook.Add( "PlayerDeath", "SKY_STAT_PlayerDeath", function( ply, inflictor, attac
 	end
 
 	GAMEMODE:EventFired( ply, "PlayerDeath", { inflictor, attacker } )
+	if ( attacker:IsPlayer() and ( ply ~= attacker ) ) then
+		GAMEMODE:EventFired( attacker, "PlayerKilled", { inflictor, ply } )
+	end
 end )
 
 -- From http://lua-users.org/wiki/StringInterpolation by http://lua-users.org/wiki/MarkEdgar

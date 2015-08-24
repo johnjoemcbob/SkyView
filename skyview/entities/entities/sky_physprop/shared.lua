@@ -195,6 +195,55 @@ function ENT:Think()
 				end
 			end
 		end
+
+		local phys = self:GetPhysicsObject()
+		if ( phys and IsValid( phys ) ) then
+			print( "PHYS VALID" )
+			phys:OutputDebugInfo()
+		else
+			print( "----" )
+			print( "----" )
+			print( "----" )
+			print( "----" )
+			print( "----" )
+			print( "----" )
+			print( "----" )
+			print( "----" )
+			print( "----" )
+			print( "----" )
+			print( "----" )
+			print( "----" )
+			print( "----" )
+			print( "----" )
+			print( "----" )
+			print( "----" )
+			print( "----" )
+			print( "----" )
+			print( "----" )
+			print( "----" )
+			print( "----" )
+			print( "----" )
+			print( "----" )
+			print( "----" )
+			print( "----" )
+			print( "----" )
+			print( "----" )
+			print( "----" )
+			print( "----" )
+			print( "----" )
+			print( "----" )
+			print( "----" )
+			print( "----" )
+			print( "----" )
+			print( "----" )
+			print( "----" )
+			print( "----" )
+			print( "----" )
+			print( "----" )
+			self:Remove()
+			return
+		end
+		debug.Trace()
 		print( "THINK END" )
 
 		self:NextThink( CurTime() )
@@ -230,13 +279,13 @@ function ENT:PhysicsCollide( colData, collider )
 					hitEnt:EmitSound(SkyView:RandomShieldSound())
 					-- Get velocity based on the shield angles
 					local bounceVel = self:GetAngles():Forward() * -10000
-					phys:SetVelocityInstantaneous(bounceVel)
+					phys:SetVelocity(bounceVel)
 				end
 			elseif ( hitEnt:IsWorld() or string.find( hitEnt:GetClass(), "func" ) ) then
 				-- In an attempt to stop physics crashes, props can only bounce every so often
 				if ( CurTime() >= self.LastBounce ) then
 					print( "BOUNCE" )
-					phys:SetVelocityInstantaneous(bounceVel)
+					phys:SetVelocity(bounceVel)
 					self.LastBounce = CurTime() + self.BetweenBounceTime
 				end
 			end
@@ -279,7 +328,7 @@ function ENT:HomeIn()
 		flightVector = flightVector * 2000
 		local phys = self:GetPhysicsObject()
 		if ( phys and IsValid( phys ) ) then
-			phys:SetVelocityInstantaneous(phys:GetVelocity() + flightVector)
+			phys:SetVelocity(phys:GetVelocity() + flightVector)
 		end
 	else -- Try to find a target
 		print( "HOMING; FINDING TARGET" )
@@ -307,7 +356,7 @@ function ENT:Throw( from, velocity, owner )
 	self:SetPos( from )
 	local phys = self:GetPhysicsObject()
 	if ( phys and IsValid( phys ) ) then
-		phys:SetVelocityInstantaneous( velocity )
+		phys:SetVelocity( velocity )
 	end
 	if( owner != nil and IsValid(owner)) then
 		print( "owner is valid" )

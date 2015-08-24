@@ -100,7 +100,6 @@ function GM:KeyPress_Round( ply, key )
 			if ( ply.SpectatingNumber > #possiblespectates ) then
 				ply.SpectatingNumber = 1
 			end
-			print( ply.SpectatingNumber )
 		ply:SpectateEntity( possiblespectates[ply.SpectatingNumber] )
 	end
 end
@@ -114,7 +113,7 @@ hook.Add( "PlayerDeath", "SKY_Round_PlayerDeath", function()
 				playersleft = playersleft + 1
 			end
 		end
-	if ( ( #player.GetAll() > 1 ) and ( playersleft <= 1 ) ) then
+	if ( ( ( #player.GetAll() > 1 ) and ( playersleft <= 1 ) ) or ( playersleft == 0 ) ) then
 		GAMEMODE:RoundEnd()
 	end
 end )

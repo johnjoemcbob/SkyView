@@ -37,7 +37,7 @@ function GM:ShouldCollide( ent1, ent2 )
 		( ( ent2:GetClass() == "sky_physprop") and ( ent2.GetJustThrown ) and ( ent2:GetJustThrown() > 0) and (ent1 == ent2:GetThrownBy()) ) or
 		( ( ent1:GetClass() == "sky_physprop") and ( ent1.IsShield ) and ( ent1.IsActiveShield ) and ( ent2:GetClass() ~= "sky_grapple" ) and ( ent2:GetClass() ~= "sky_physprop" ) and ( not ent2:IsPlayer() ) ) or
 		( ( ent2:GetClass() == "sky_physprop") and ( ent2.IsShield ) and ( ent2.IsActiveShield ) and ( ent1:GetClass() ~= "sky_grapple" ) and ( ent1:GetClass() ~= "sky_physprop" ) and ( not ent2:IsPlayer() ) )
-	) then	
+	) then
 		return false
 	end
 	return true

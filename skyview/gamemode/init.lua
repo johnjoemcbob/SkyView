@@ -91,7 +91,8 @@ local ShieldHitSounds =
 local PowerupChoices =
 {
   "sky_powerup_base",
-  "sky_powerup_homing"
+  "sky_powerup_homing",
+  "sky_powerup_sawmerang"
 }
 
 //SkyView Functions
@@ -185,7 +186,6 @@ function GM:PostPlayerDeath( ply )
 
   -- Spawn a powerup! -- pick from table of powerups
   local pickupchance = math.random(0, 100)
-  print(pickupchance)
   if(pickupchance > 70) then --30% chance
     newPowerup = ents.Create(table.Random(PowerupChoices))
 
@@ -204,51 +204,12 @@ function GM:PlayerDeath( ply, inflictor, attacker )
 	--self.BaseClass:PlayerDeath( ply, inflictor, attacker )
 
 	if( inflictor:GetClass() == "sky_physprop" ) then
-		if( inflictor:GetThrownBy() != nil and IsValid( inflictor:GetThrownBy() ) ) then
-			attacker = inflictor:GetThrownBy()
-			if( attacker == ply ) then
-				-- Suicide by Prop + 1
-
-				-- Check if they grappled themselves a deadly object
-				if ( inflictor.LastGrappledBy == ply ) then
-					PrintMessage( HUD_PRINTTALK, ply:Name() .. " reeled in a big one." )
-
-				-- Check  bounce timer on prop for rebound suicide.
-				elseif (inflictor.RecentlyBounced > 0 and inflictor.TimesBounced > 2 ) then
-					PrintMessage( HUD_PRINTTALK, ply:Name() .. " got a nasty, bouncy, surprise." )
-
-
-				else
-					-- Somehow walked in front of it.
-					PrintMessage( HUD_PRINTTALK, ply:Name() .. " couldn't dodge themselves." )
-				end
-			else
-				-- Someone else threw it
-				-- Check grapple on prop for grapple kill.
-				if( inflictor.LastGrappledBy == attacker ) then
-					PrintMessage( HUD_PRINTTALK, attacker:Name() .. " whiplashed " .. ply:Name() .. "." )
-
-				-- Player grappled the attackers prop towards them
-				elseif( inflictor.LastGrappledBy == ply ) then
-					PrintMessage( HUD_PRINTTALK, ply:Name() .. " played " .. attacker:Name() .. "'s claw game and lost. ")
-
-				-- Check bounce timer on prop for rebound kill.
-				elseif( inflictor.RecentlyBounced > 0  and inflictor.TimesBounced > 2 ) then
-					PrintMessage( HUD_PRINTTALK, attacker:Name() .. " played squash with " .. ply:Name() .. "." )
-
-				else
-					-- Normal kill.
-					PrintMessage( HUD_PRINTTALK, attacker:Name() .. " ground " .. ply:Name() .. " into a paste." )
-				end
-			end
-		end
-
 		-- Check for multikill
 		if(inflictor.PlayersKilled > 0) then
 			PrintMessage( HUD_PRINTTALK, "MULTI KILL!" )
 		end
 
-		-- This prop has killed people. O:
+		-- This prop has killed people
 		inflictor.PlayersKilled = inflictor.PlayersKilled + 1
 	end
 end
@@ -285,6 +246,15 @@ function GM:KeyPress(ply, key)
 					end
 					prop:SetPos( throwPos )
 					prop:SetAngles( fireangle )
+
+          -- SAWMERANG
+          if(ply:GetBuff(3) != nil) then
+            prop:SetModel("models/props_junk/sawblade001a.mdl")
+            prop:SetModelScale(2)
+            prop:SetColor(Color( 80, 255, 255, 200 ))
+            prop:SetMaterial("models/debug/debugwhite")
+          end
+
 				prop:Spawn()
 
 				-- Throw the prop, setting its owner

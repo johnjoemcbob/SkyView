@@ -21,6 +21,7 @@
 --
 -- Current list of stat events which can be called (please copy exactly);
 -- -	OnPlayerDeath
+-- -	OnPlayerKilled
 -- -	OnPlayerJump
 -- -	OnPlayerDoubleJump
 -- -	OnPlayerGrappleJump
@@ -87,6 +88,73 @@ GM.Stats["death_suicide"] = {
 		end
 	end
 }
+GM.Stats["death_suicide_prop"] = {
+	Name = "Suicides: %i",
+	Message = "{self} couldn't dodge themselves",
+	MessageType = "death",
+	Sound = "skyview/announcer/salty.mp3",
+	Score = -100,
+	ProgressIncrement = 1, -- The amount to increment each time this stat tracks
+	ProgressMax = 1, -- The amount of progress required before it is counted as achieved on the player and progress is reset
+	Prerequisite = "death_suicide",
+	PrerequisiteTime = 0,
+	OnPlayerDeath = function( self, ply, args )
+		-- If this prop wasn't grappled into themselves, and has bounced
+		if (
+			( args[1]:GetClass() == "sky_physprop" ) and
+			( ( args[1].RecentlyBounced <= 0 ) or ( args[1].TimesBounced <= 2 ) )
+		) then
+			return ply,  -- Flag to add to stat progress (within sv_stats.lua)
+			{
+				self = ply:Nick()
+			}
+		end
+	end
+}
+GM.Stats["death_suicide_prop_grapple"] = {
+	Name = "Suicides by Hook: %i",
+	Message = "{self} reeled in a big one",
+	MessageType = "death",
+	Sound = "skyview/announcer/overzealous.mp3",
+	Score = -200,
+	ProgressIncrement = 1, -- The amount to increment each time this stat tracks
+	ProgressMax = 1, -- The amount of progress required before it is counted as achieved on the player and progress is reset
+	Prerequisite = "death_suicide_prop",
+	PrerequisiteTime = 0,
+	OnPlayerDeath = function( self, ply, args )
+		-- If this prop was grappled into themselves
+		if ( args[1].LastGrappledBy == ply ) then
+			return ply,  -- Flag to add to stat progress (within sv_stats.lua)
+			{
+				self = ply:Nick()
+			}
+		end
+	end
+}
+GM.Stats["death_suicide_bounce"] = {
+	Name = "Rebound Suicides: %i",
+	Message = "{self} hit themselves on the rebound",
+	MessageType = "death",
+	Sound = "skyview/announcer/rebound.mp3",
+	Score = -100,
+	ProgressIncrement = 1, -- The amount to increment each time this stat tracks
+	ProgressMax = 1, -- The amount of progress required before it is counted as achieved on the player and progress is reset
+	Prerequisite = "death_suicide",
+	PrerequisiteTime = 0,
+	OnPlayerDeath = function( self, ply, args )
+		-- If this prop wasn't grappled into themselves, and has bounced
+		if (
+			( args[1]:GetClass() == "sky_physprop" ) and
+			( args[1].LastGrappledBy ~= ply ) and
+			( ( args[1].RecentlyBounced > 0 ) and ( args[1].TimesBounced > 2 ) )
+		) then
+			return ply,  -- Flag to add to stat progress (within sv_stats.lua)
+			{
+				self = ply:Nick()
+			}
+		end
+	end
+}
 GM.Stats["death_world"] = {
 	Name = "Gravity Deaths: %i",
 	Message = "{self} fell",
@@ -127,26 +195,6 @@ GM.Stats["death_world_sky"] = {
 		end
 	end
 }
-GM.Stats["death_suicide_grapple"] = {
-	Name = "Suicides by Hook: %i",
-	Message = "{self} reeled in a big one",
-	MessageType = "death",
-	Sound = "skyview/announcer/overzealous.mp3",
-	Score = -200,
-	ProgressIncrement = 1, -- The amount to increment each time this stat tracks
-	ProgressMax = 1, -- The amount of progress required before it is counted as achieved on the player and progress is reset
-	Prerequisite = "death_suicide",
-	PrerequisiteTime = 0,
-	OnPlayerDeath = function( self, ply, args )
-		-- If this prop was grappled into themselves
-		if ( args[1].LastGrappledBy == ply ) then
-			return ply,  -- Flag to add to stat progress (within sv_stats.lua)
-			{
-				self = ply:Nick()
-			}
-		end
-	end
-}
 GM.Stats["kill"] = {
 	Name = "Kills: %i",
 	Message = "{self} killed {victim}",
@@ -157,13 +205,13 @@ GM.Stats["kill"] = {
 	ProgressMax = 1, -- The amount of progress required before it is counted as achieved on the player and progress is reset
 	Prerequisite = nil,
 	PrerequisiteTime = 0,
-	OnPlayerDeath = function( self, ply, args )
+	OnPlayerKilled = function( self, ply, args )
 		-- Killed someone else
-		if ( ( ply ~= args[2] ) and ( args[2]:GetClass() == "player" ) ) then
-			return args[2],  -- Flag to add to stat progress (within sv_stats.lua)
+		if ( ( ply ~= args[2] ) and ( ply:GetClass() == "player" ) ) then
+			return ply,  -- Flag to add to stat progress (within sv_stats.lua)
 			{
-				self = args[2]:Nick(),
-				victim = ply:Nick()
+				self = ply:Nick(),
+				victim = args[2]:Nick()
 			}
 		end
 	end
@@ -178,13 +226,55 @@ GM.Stats["kill_prop"] = {
 	ProgressMax = 1, -- The amount of progress required before it is counted as achieved on the player and progress is reset
 	Prerequisite = nil,
 	PrerequisiteTime = 0,
-	OnPlayerDeath = function( self, ply, args )
+	OnPlayerKilled = function( self, ply, args )
 		-- Killed them with a prop
-		if ( ( ply ~= args[2] ) and ( args[2]:GetClass() == "player" ) and ( args[1]:GetClass() == "sky_physprop" ) and ( not args[1].IsShield ) ) then
-			return args[2],  -- Flag to add to stat progress (within sv_stats.lua)
+		if ( ( ply ~= args[2] ) and ( ply:GetClass() == "player" ) and ( args[1]:GetClass() == "sky_physprop" ) and ( not args[1].IsShield ) ) then
+			return ply,  -- Flag to add to stat progress (within sv_stats.lua)
 			{
-				self = args[2]:Nick(),
-				victim = ply:Nick()
+				self = ply:Nick(),
+				victim = args[2]:Nick()
+			}
+		end
+	end
+}
+GM.Stats["kill_prop_bounce"] = {
+	Name = "Rebound Prop Kills: %i",
+	Message = "{self} hit {victim} on the rebound",
+	MessageType = "kill",
+	Sound = "skyview/announcer/rebound.mp3",
+	Score = 50,
+	ProgressIncrement = 1, -- The amount to increment each time this stat tracks
+	ProgressMax = 1, -- The amount of progress required before it is counted as achieved on the player and progress is reset
+	Prerequisite = "kill_prop",
+	PrerequisiteTime = 0,
+	OnPlayerKilled = function( self, ply, args )
+		-- Killed them with a prop which has been bouncing around
+		if( args[1].RecentlyBounced > 0  and args[1].TimesBounced > 2 ) then
+			return ply,  -- Flag to add to stat progress (within sv_stats.lua)
+			{
+				self = ply:Nick(),
+				victim = args[2]:Nick()
+			}
+		end
+	end
+}
+GM.Stats["kill_prop_grapple"] = {
+	Name = "Grappled Prop Kills: %i",
+	Message = "{self} whiplashed {victim}",
+	MessageType = "kill",
+	Sound = "skyview/announcer/whiplash.mp3",
+	Score = 50,
+	ProgressIncrement = 1, -- The amount to increment each time this stat tracks
+	ProgressMax = 1, -- The amount of progress required before it is counted as achieved on the player and progress is reset
+	Prerequisite = "kill_prop",
+	PrerequisiteTime = 0,
+	OnPlayerKilled = function( self, ply, args )
+		-- Killed them with a prop that they'd grappled
+		if ( args[1].LastGrappledBy == ply ) then
+			return ply,  -- Flag to add to stat progress (within sv_stats.lua)
+			{
+				self = ply:Nick(),
+				victim = args[2]:Nick()
 			}
 		end
 	end
@@ -199,15 +289,15 @@ GM.Stats["kill_shield"] = {
 	ProgressMax = 1, -- The amount of progress required before it is counted as achieved on the player and progress is reset
 	Prerequisite = nil,
 	PrerequisiteTime = 0,
-	OnPlayerDeath = function( self, ply, args )
+	OnPlayerKilled = function( self, ply, args )
 		-- Killed them with a shield
-		if ( ( args[2]:GetClass() == "player" ) and ( args[1]:GetClass() == "sky_physprop" ) and args[1].IsShield ) then
+		if ( ( ply:GetClass() == "player" ) and ( args[1]:GetClass() == "sky_physprop" ) and args[1].IsShield ) then
 			-- Change message type depending on if it was a self kill or another player kill
 			if ( ply ~= args[2] ) then
-				return args[2],  -- Flag to add to stat progress (within sv_stats.lua)
+				return ply,  -- Flag to add to stat progress (within sv_stats.lua)
 				{
-					self = args[2]:Nick(),
-					victim = ply:Nick()
+					self = ply:Nick(),
+					victim = args[2]:Nick()
 				}
 			end
 		end
@@ -223,15 +313,15 @@ GM.Stats["kill_shield_self"] = {
 	ProgressMax = 1, -- The amount of progress required before it is counted as achieved on the player and progress is reset
 	Prerequisite = nil,
 	PrerequisiteTime = 0,
-	OnPlayerDeath = function( self, ply, args )
+	OnPlayerKilled = function( self, ply, args )
 		-- Killed them with a shield
-		if ( ( args[2]:GetClass() == "player" ) and ( args[1]:GetClass() == "sky_physprop" ) and args[1].IsShield ) then
+		if ( ( ply:GetClass() == "player" ) and ( args[1]:GetClass() == "sky_physprop" ) and args[1].IsShield ) then
 			-- Change message type depending on if it was a self kill or another player kill
 			if ( ply == args[2] ) then
-				return args[2],  -- Flag to add to stat progress (within sv_stats.lua)
+				return ply,  -- Flag to add to stat progress (within sv_stats.lua)
 				{
-					self = args[2]:Nick(),
-					victim = ply:Nick()
+					self = ply:Nick(),
+					victim = args[2]:Nick()
 				}
 			end
 		end
