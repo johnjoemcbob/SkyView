@@ -34,15 +34,40 @@ function GM:RoundStart()
 	self.CurrentRoundState = self.RoundStates.Progress
 
 	for k, ply in pairs( player.GetAll() ) do
-		-- Choose a random colour
+		-- Choose random colours for the players
 		local col = GAMEMODE.PlayerColours[math.random( 1, #GAMEMODE.PlayerColours)]
 			col = Vector( col.r / 255, col.g / 255, col.b / 255 )
 		ply:SetPlayerColor( col )
+
+		-- Display the start of round message
+		ply:SetNWString( "sky_round", "Round Begin" )
+
+		timer.Simple( 1, function()
+			ply:SetNWString( "sky_round", "" )
+		end )
 	end
 end
 
 function GM:RoundEnd()
 	self.CurrentRoundState = self.RoundStates.End
+
+	-- Find the winner
+	local winner = nil
+	for k, ply in pairs( player.GetAll() ) do
+		-- if ( ( not winner ) or ( ply:GetNWInt( "sky_score" ) > winner:GetNWInt( "sky_score" ) ) ) then
+			-- winner = ply
+		-- end
+		if ( ply:Deaths() < SkyView.Config.MaxLivesPerPlayer ) then
+			winner = ply
+		end
+	end
+
+	-- Display the end of round message, and the winner
+	local endtext = string.format( "%s Wins!", winner:Nick() )
+	for k, ply in pairs( player.GetAll() ) do
+		-- Display the end of round message
+		ply:SetNWString( "sky_round", endtext )
+	end
 
 	-- Timer to reset the round and then start a new one
 	timer.Simple( 5, function()
@@ -58,6 +83,7 @@ function GM:RoundReset()
 		ply:SetNWInt( "sky_score", 0 )
 		ply:UnSpectate()
 		ply.SpectatingNumber = nil
+		ply:SetNWString( "sky_spectatee", "" )
 		ply:Spawn()
 	end
 
@@ -73,6 +99,7 @@ function GM:PlayerDeathThink( ply )
 				if ( ( ply ~= otherply ) and otherply:Alive() ) then
 					ply:Spectate( OBS_MODE_IN_EYE )
 					ply:SpectateEntity( otherply )
+					ply:SetNWString( "sky_spectatee", otherply:Nick() )
 					break
 				end
 			end
@@ -100,7 +127,10 @@ function GM:KeyPress_Round( ply, key )
 			if ( ply.SpectatingNumber > #possiblespectates ) then
 				ply.SpectatingNumber = 1
 			end
-		ply:SpectateEntity( possiblespectates[ply.SpectatingNumber] )
+		if ( possiblespectates[ply.SpectatingNumber] and IsValid( possiblespectates[ply.SpectatingNumber] ) ) then
+			ply:SpectateEntity( possiblespectates[ply.SpectatingNumber] )
+			ply:SetNWString( "sky_spectatee", possiblespectates[ply.SpectatingNumber]:Nick() )
+		end
 	end
 end
 

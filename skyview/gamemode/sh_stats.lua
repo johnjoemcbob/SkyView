@@ -304,26 +304,46 @@ GM.Stats["kill_shield"] = {
 	end
 }
 GM.Stats["kill_shield_self"] = {
-	Name = "Shield Kills: %i",
-	Message = "{self} shield bashed themselves",
+	Name = "Shield Suicides: %i",
+	Message = "{self} bashed themselves",
 	MessageType = "death",
 	Sound = "skyview/announcer/shield_kill.mp3",
 	Score = -500,
 	ProgressIncrement = 1, -- The amount to increment each time this stat tracks
 	ProgressMax = 1, -- The amount of progress required before it is counted as achieved on the player and progress is reset
-	Prerequisite = nil,
+	Prerequisite = "death_suicide",
 	PrerequisiteTime = 0,
-	OnPlayerKilled = function( self, ply, args )
+	OnPlayerDeath = function( self, ply, args )
 		-- Killed them with a shield
-		if ( ( ply:GetClass() == "player" ) and ( args[1]:GetClass() == "sky_physprop" ) and args[1].IsShield ) then
+		if ( ( args[1]:GetClass() == "sky_physprop" ) and args[1].IsShield ) then
 			-- Change message type depending on if it was a self kill or another player kill
 			if ( ply == args[2] ) then
 				return ply,  -- Flag to add to stat progress (within sv_stats.lua)
 				{
-					self = ply:Nick(),
-					victim = args[2]:Nick()
+					self = ply:Nick()
 				}
 			end
+		end
+	end
+}
+GM.Stats["kill_shield_self_other"] = {
+	Name = "Shield Assist Suicides: %i",
+	Message = "{self} bashed themselves with {shield}'s shield",
+	MessageType = "death",
+	Sound = "skyview/announcer/shield_kill.mp3",
+	Score = -500,
+	ProgressIncrement = 1, -- The amount to increment each time this stat tracks
+	ProgressMax = 1, -- The amount of progress required before it is counted as achieved on the player and progress is reset
+	Prerequisite = "kill_shield_self",
+	PrerequisiteTime = 0,
+	OnPlayerDeath = function( self, ply, args )
+		-- Killed them with a shield
+		if ( args[1].Owner ~= ply ) then
+			return ply,  -- Flag to add to stat progress (within sv_stats.lua)
+			{
+				self = ply:Nick(),
+				shield = args[1].Owner:Nick()
+			}
 		end
 	end
 }

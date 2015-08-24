@@ -254,11 +254,11 @@ function ENT:Think()
 end
 
 function ENT:PhysicsCollide( data, phys )
-	print( "GRAPPLE COLLISION---" )
+	-- print( "GRAPPLE COLLISION---" )
 	PrintTable( data )
-	print( phys )
-	print( "Valid?: "..tostring(IsValid( phys )) )
-	print( "GRAPPLE COLLISION---/end" )
+	-- print( phys )
+	-- print( "Valid?: "..tostring(IsValid( phys )) )
+	-- print( "GRAPPLE COLLISION---/end" )
 
 	local entity
 	local hitpos = data.HitPos

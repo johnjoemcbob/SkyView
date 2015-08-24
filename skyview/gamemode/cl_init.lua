@@ -1,5 +1,6 @@
 include("shared.lua")
 include("shared/sh_config.lua")
+include( "cl_scoreboard.lua" )
 include( "cl_deathnotice.lua" )
 
 surface.CreateFont("skyview_firstplayerfont", {
@@ -166,22 +167,36 @@ end
 function GM:HUDPaint()
 	local padding = 16
 	local x = ScrW() / 2
-	local y = ScrH() / 80
+	local y = ScrH() / 16
 
 	-- Find the required width for the score text
 	local font = "skyview_scorefont"
 	local text = LocalPlayer():GetNWInt( "sky_score" )
+	local textspectatee = LocalPlayer():GetNWString( "sky_spectatee" )
+	local textround = LocalPlayer():GetNWString( "sky_round" )
 	if ( text ~= LastDisplayedScore ) then
 		ScoreShake = 100
 		LastDisplayedScore = text
 	else
 		ScoreShake = math.max( ScoreShake - 3, 0 )
 	end
+	surface.SetFont( font )
 
 	-- Display the score text
+	local width, height = surface.GetTextSize( text )
 	local col = LocalPlayer():GetPlayerColor()
 		col = Color( col.x * 255, col.y * 255, col.z * 255 )
-	draw.TextRotated( text, x, y, col, font, math.sin( CurTime() * ScoreShake ) * 30 )
+	draw.TextRotated( text, x, y - ( height / 2 ), col, font, math.sin( CurTime() * ScoreShake ) * 30 )
+
+	-- Display the round status text
+	width, height = surface.GetTextSize( textround )
+	y = ScrH() / 7
+	draw.TextRotated( textround, x, y - ( height / 2 ), Color( 255, 255, 255 ), font, 0 )
+
+	-- Display the spectatee name text
+	width, height = surface.GetTextSize( textspectatee )
+	y = ScrH() / 12 * 10
+	draw.TextRotated( textspectatee, x, y - ( height / 2 ), Color( 255, 255, 255 ), font, 0 )
 end
 
 function GM:RenderScreenspaceEffects()
