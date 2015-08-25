@@ -1,4 +1,4 @@
--- Matthew Cormack
+-- Matthew Cormack (@johnjoemcbob)
 -- 22/08/15
 -- Round system
 
@@ -45,6 +45,9 @@ function GM:RoundStart()
 		timer.Simple( 1, function()
 			ply:SetNWString( "sky_round", "" )
 		end )
+
+		-- Fire event & play round start noise
+		GAMEMODE:EventFired( ply, "RoundBegin" )
 	end
 end
 
@@ -57,7 +60,7 @@ function GM:RoundEnd()
 		-- if ( ( not winner ) or ( ply:GetNWInt( "sky_score" ) > winner:GetNWInt( "sky_score" ) ) ) then
 			-- winner = ply
 		-- end
-		if ( ply:Deaths() < SkyView.Config.MaxLivesPerPlayer ) then
+		if ( ( not winner ) or ( ply:Deaths() < SkyView.Config.MaxLivesPerPlayer ) ) then
 			winner = ply
 		end
 	end
@@ -67,6 +70,9 @@ function GM:RoundEnd()
 	for k, ply in pairs( player.GetAll() ) do
 		-- Display the end of round message
 		ply:SetNWString( "sky_round", endtext )
+
+		-- Fire event & play round start noise
+		GAMEMODE:EventFired( ply, "RoundEnd" )
 	end
 
 	-- Timer to reset the round and then start a new one

@@ -6,6 +6,7 @@ AddCSLuaFile( "cl_scoreboard.lua" )
 AddCSLuaFile( "cl_deathnotice.lua" )
 AddCSLuaFile( "sh_stats.lua" )
 AddCSLuaFile( "sh_buff.lua" )
+AddCSLuaFile( "sh_sound.lua" )
 
 //make dirs to access later
 file.CreateDir("skyview")
@@ -22,6 +23,7 @@ include("shared/sh_config.lua") --load our config file
 include("shared.lua") --load shared.lua file
 include( "sh_buff.lua" )
 include( "sh_stats.lua" )
+include( "sh_sound.lua" )
 
 include( "sv_round.lua" )
 include( "sv_buff.lua" )
@@ -175,6 +177,15 @@ function GM:PlayerSpawn(ply)
 	for k, buff in pairs( self.Buffs ) do
 		ply:RemoveBuff( k )
 	end
+
+	-- Reset to the default material for this player model
+	if ( ply.LastMaterial ) then
+		ply:SetMaterial( ply.LastMaterial )
+	end
+	ply.LastMaterial = ply:GetMaterial()
+
+	-- Flag as invulnerable due to just spawning
+	ply:SetNWFloat( "sky_spawninvuln", CurTime() + SkyView.Config.SpawnInvulnerabilityTime )
 end
 
 function GM:PostPlayerDeath( ply )
@@ -302,6 +313,23 @@ function GM:Think()
 
 	for k, ply in pairs( player.GetAll() ) do
 		if ( ply:Alive() ) then
+			-- Run invulnerability dispaly logic, flash the player between invisible and visible
+			local invulndiff = ( ply:GetNWFloat( "sky_spawninvuln" ) - CurTime() ) * 10000
+			if ( invulndiff > 0 ) then
+				-- Toggle between visible and invisible using materials
+				if ( ( invulndiff % 2 ) == 0 ) then
+					if ( ply:GetMaterial() ~= "models/shadertest/shader3" ) then
+						ply:SetMaterial( "models/shadertest/shader3" )
+					else
+						ply:SetMaterial( "models/effects/vol_light001" )
+					end
+				end
+			-- Ensure that the player is visible after invulnerability runs out
+			elseif ( ply.LastMaterial ) then
+				ply:SetMaterial( ply.LastMaterial )
+				ply.LastMaterial = nil
+			end
+
 			-- Run shield think logic
 			self:Think_Shield( ply )
 

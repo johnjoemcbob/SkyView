@@ -47,7 +47,7 @@ function GM:Think_Stats()
 					local increment = self:EventAcquisition( ply, statname, stat )
 					-- Only display the message if there has been adequate progress
 					if ( increment ) then
-						self:EventSendMessage( ply, stat, ply.Stats[statname].Data )
+						self:EventSendMessage( ply, statname, stat, ply.Stats[statname].Data )
 					end
 				end
 				ply.Stats[statname].Data = nil
@@ -117,10 +117,10 @@ function GM:EventFired( ply, event, args )
 						-- Display message or buffer it for display after the event loop
 						if ( stat.MessageType ) then
 							-- Add player's name to the message type, so each player can have one of each message per event loop
-							table.insert( messages, { type = stat.MessageType..tostring( addprogress:Nick() ), ply = addprogress, stat = stat, data = data } )
+							table.insert( messages, { type = stat.MessageType..tostring( addprogress:Nick() ), ply = addprogress, statname = statname, stat = stat, data = data } )
 						else
 							-- Display the message now
-							self:EventSendMessage( addprogress, stat, data )
+							self:EventSendMessage( addprogress, statname, stat, data )
 						end
 					end
 				end
@@ -155,6 +155,7 @@ function GM:EventAcquisition( ply, statname, stat )
 		-- Increment stat
 		ply.Stats[statname].LastIncrement = CurTime()
 		ply.Stats[statname].TotalIncrements = ply.Stats[statname].TotalIncrements + 1
+		PrintTable( ply.Stats[statname] )
 
 		-- Increment player score
 		ply:SetNWInt( "sky_score", ply:GetNWInt( "sky_score" ) + stat.Score )
@@ -174,7 +175,7 @@ function GM:EventSendBufferedMessages( messages )
 		local message = messages[messageindex]
 		if ( not typeused[message.type] ) then
 			-- Display the message
-			self:EventSendMessage( message.ply, message.stat, message.data )
+			self:EventSendMessage( message.ply, message.statname, message.stat, message.data )
 
 			-- Flag this message type as used up for the current event loop
 			typeused[message.type] = true
@@ -182,7 +183,7 @@ function GM:EventSendBufferedMessages( messages )
 	end
 end
 
-function GM:EventSendMessage( ply, stat, data )
+function GM:EventSendMessage( ply, statname, stat, data )
 	-- Send to client, which will display any messages/play any sounds
 	net.Start( "PlayerAction" )
 		net.WriteEntity( ply )
@@ -190,7 +191,7 @@ function GM:EventSendMessage( ply, stat, data )
 			stat.Message,
 			data
 		) )
-		net.WriteString( stat.Sound or "" )
+		net.WriteString( self:EventSelectSound( ply.Stats[statname], stat.Sound ) )
 	net.Broadcast()
 end
 
@@ -205,6 +206,40 @@ function GM:EventCheckPrerequisite( ply, prerequisite, retime )
 		return false
 	end
 	return true
+end
+
+function GM:EventSelectSound( stat, soundfile )
+	local soundtable = self.Sounds[soundfile]
+	-- Has an entry (is an id), decide which possible sound to play
+	if ( soundtable ) then
+		local selectedsoundfile
+			-- Find all possible sounds based on the number of increments to this stat
+			local possiblesounds = {}
+			local maxratio = 0
+				for k, sound in pairs( soundtable ) do
+					if ( ( stat.TotalIncrements or 0 ) >= sound.MinIncrement ) then
+						table.insert( possiblesounds, sound )
+						maxratio = maxratio + sound.Chance
+					end
+				end
+			-- Find a random number from 1 to the max ratio, then loop through the possible
+			-- sounds and find the range in which the number lies
+			local randomratio = math.random( 1, maxratio )
+			local currentratio = 0
+			for k, sound in pairs( possiblesounds ) do
+				-- Add the current sound's chance to the old ratio, and check again if the
+				-- random ratio is within this range
+				currentratio = currentratio + sound.Chance
+				if ( randomratio <= currentratio ) then
+					selectedsoundfile = sound.File
+					break
+				end
+			end
+		return selectedsoundfile
+	-- Does not have an entry, play the sound file
+	else
+		return soundfile or ""
+	end
 end
 
 hook.Add( "PlayerDeath", "SKY_STAT_PlayerDeath", function( ply, inflictor, attacker )

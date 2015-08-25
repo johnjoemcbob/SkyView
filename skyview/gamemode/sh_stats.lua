@@ -13,6 +13,8 @@
 -- for when the stat increases (if any), the score to award the player (if any),
 -- the id of any prerequisite stats, and a list of positions this stat was achieved
 -- at
+-- The sound option can select and play a sound from sh_sound.lua depending on the ID
+-- given
 --
 -- sv_stats.lua;
 -- The player then has a table of stat ids, which includes data about when they
@@ -20,6 +22,8 @@
 -- and the total number of increments
 --
 -- Current list of stat events which can be called (please copy exactly);
+-- -	OnRoundBegin
+-- -	OnRoundEnd
 -- -	OnPlayerDeath
 -- -	OnPlayerKilled
 -- -	OnPlayerJump
@@ -34,11 +38,41 @@
 -- -  OnPowerupAcquired (called when a player gets a powerup via any means)
 GM.Stats = {}
 
+GM.Stats["round_begin"] = {
+	Name = "Present for %i rounds beginning",
+	--Message = "A prop narrowly missed {self}",
+	--MessageType = "",
+	Sound = "round_begin",
+	Score = 0,
+	ProgressIncrement = 1, -- The amount to increment each time this stat tracks
+	ProgressMax = 1, -- The amount of progress required before it is counted as achieved on the player and progress is reset
+	Prerequisite = nil,
+	PrerequisiteTime = 0,
+	OnRoundBegin = function( self, ply, args )
+		return ply,  -- Flag to add to stat progress (within sv_stats.lua)
+		{}
+	end
+}
+GM.Stats["round_end"] = {
+	Name = "Present for %i rounds ending",
+	--Message = "A prop narrowly missed {self}",
+	--MessageType = "",
+	Sound = "round_end",
+	Score = 0,
+	ProgressIncrement = 1, -- The amount to increment each time this stat tracks
+	ProgressMax = 1, -- The amount of progress required before it is counted as achieved on the player and progress is reset
+	Prerequisite = nil,
+	PrerequisiteTime = 0,
+	OnRoundEnd = function( self, ply, args )
+		return ply,  -- Flag to add to stat progress (within sv_stats.lua)
+		{}
+	end
+}
 GM.Stats["nearmiss"] = {
 	Name = "Near Misses: %i",
 	Message = "A prop narrowly missed {self}",
 	--MessageType = "",
-	Sound = "skyview/announcer/near_miss.mp3",
+	Sound = "near_miss",
 	Score = 50,
 	ProgressIncrement = 1, -- The amount to increment each time this stat tracks
 	ProgressMax = 1, -- The amount of progress required before it is counted as achieved on the player and progress is reset
@@ -366,7 +400,7 @@ GM.Stats["grapple_fired"] = {
 GM.Stats["grapple_hitsky"] = {
 	Name = "Grapple Sky Hits: %i",
 	Message = "{self} tried to grapple the sky",
-	Sound = "skyview/announcer/you_cant_grapple_air.mp3",
+	Sound = "grapple_hitsky",
 	Score = -50,
 	ProgressIncrement = 1, -- The amount to increment each time this stat tracks
 	ProgressMax = 1, -- The amount of progress required before it is counted as achieved on the player and progress is reset

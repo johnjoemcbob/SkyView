@@ -39,3 +39,7 @@ SkyView.Config.MaxLivesPerPlayer = 5 --Max number of lives per player per round
 --[[
 	The higher this is, the longer rounds will last; and the more likely the server is to lag/crash
 --]]
+SkyView.Config.SpawnInvulnerabilityTime = 2 --How long players should be invulnerable to damage for after spawning
+--[[
+	
+--]]

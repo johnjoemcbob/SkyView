@@ -3,6 +3,9 @@ GM.Author = "Tyguy"
 GM.Email = "N/A"
 GM.Website = "N/A"
 
+include( "sh_stats.lua" )
+include( "sh_sound.lua" )
+
 GM.PlayerColours = {
 	Color( 255, 0, 0 ),
 	Color( 255, 255, 0 ),
@@ -25,11 +28,14 @@ end
 
 function GM:ShouldCollide( ent1, ent2 )
 	-- Don't run collision between;
+	-- -	Players with spawn invulnerability
 	-- -	A grapple hook and it's owner
 	-- -	Two grapple hooks
 	-- -	Props JUST thrown by self (as they are still inside self)
 	-- -	Active shields and anything other than grapple hooks or props
 	if (
+		( ( ent1:IsPlayer() ) and ( ent1:GetNWFloat( "sky_spawninvuln" ) >= CurTime() ) ) or
+		( ( ent2:IsPlayer() ) and ( ent2:GetNWFloat( "sky_spawninvuln" ) >= CurTime() ) ) or
 		( ( ent1:GetClass() == "sky_grapple" ) and ( ent1.Owner == ent2 ) ) or
 		( ( ent2:GetClass() == "sky_grapple" ) and ( ent2.Owner == ent1 ) ) or
 		( ( ent1:GetClass() == "sky_grapple" ) and ( ent2:GetClass() == "sky_grapple" ) ) or
