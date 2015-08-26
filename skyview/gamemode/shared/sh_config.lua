@@ -43,3 +43,7 @@ SkyView.Config.SpawnInvulnerabilityTime = 2 --How long players should be invulne
 --[[
 	
 --]]
+SkyView.Config.RoundEndTime = 20 --The gloat time at the end of rounds before the new one begins
+--[[
+	This needs to be longer than 16 seconds in order to play the outro music
+--]]

@@ -35,6 +35,11 @@ local myView = 90
 local LastDisplayedScore = 0
 local ScoreShake = 0
 
+local Sound_Music_Intro
+local Sound_Music_Loop
+local Sound_Music_Outro
+local LastMusicStartTime = CurTime() + 100
+
 net.Receive("skyview_firstplayerscreen", function(ply)
 	local FirstScreenMenu = vgui.Create("DFrame")
 	FirstScreenMenu:SetPos(0, 0)
@@ -156,6 +161,66 @@ hook.Add( "PreDrawHalos", "SKY_PreDrawHalos", function()
 	end
 end )
 
+function GM:InitPostEntity()
+	Sound_Music_Intro = CreateSound( LocalPlayer(), "skyview/music/intro.mp3" )
+	Sound_Music_Loop = CreateSound( LocalPlayer(), "skyview/music/loop.mp3" )
+	Sound_Music_Outro = CreateSound( LocalPlayer(), "skyview/music/outro.mp3" )
+end
+
+function GM:PlayMusic( message )
+	message = string.lower( message )
+
+	-- Play intro
+	if ( string.find( message, "begin" ) ) then
+		if ( not Sound_Music_Intro:IsPlaying() ) then
+			self:PlayMusicTrack( Sound_Music_Intro )
+		end
+	-- Play outro
+	elseif ( string.find( message, "wins" ) ) then
+		if ( not Sound_Music_Outro:IsPlaying() ) then
+			print( "play" )
+			self:PlayMusicTrack( Sound_Music_Outro )
+		end
+	-- Play loop
+	else
+		-- Isn't still playing the intro, and
+		-- Isn't playing the loop effect
+		-- OR Time for the loop to loop
+		if (
+			(
+				( not Sound_Music_Intro:IsPlaying() ) and
+				( not Sound_Music_Loop:IsPlaying() )
+			) or
+			( CurTime() >= ( LastMusicStartTime + self:GetCurrentMusicTrackLength() ) )
+		) then
+			self:PlayMusicTrack( Sound_Music_Loop )
+		end
+	end
+end
+
+function GM:PlayMusicTrack( track )
+	-- Stop all tracks
+	Sound_Music_Intro:Stop()
+	Sound_Music_Loop:Stop()
+	Sound_Music_Outro:Stop()
+
+	-- Play the required track, and store the time started for switching to the next track/looping
+	track:Play()
+	LastMusicStartTime = CurTime()
+end
+
+function GM:GetCurrentMusicTrackLength()
+	-- Intro
+	if ( Sound_Music_Intro:IsPlaying() ) then
+		return 22
+	-- Loop
+	elseif ( Sound_Music_Loop:IsPlaying() ) then
+		return 46.3
+	-- Outro
+	else
+		return 15
+	end
+end
 
 function GM:HUDShouldDraw(name)
 	if name == "CHudHealth" then 
@@ -192,6 +257,7 @@ function GM:HUDPaint()
 	width, height = surface.GetTextSize( textround )
 	y = ScrH() / 7
 	draw.TextRotated( textround, x, y - ( height / 2 ), Color( 255, 255, 255 ), font, 0 )
+	self:PlayMusic( textround )
 
 	-- Display the spectatee name text
 	width, height = surface.GetTextSize( textspectatee )

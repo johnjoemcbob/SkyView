@@ -76,7 +76,7 @@ function GM:RoundEnd()
 	end
 
 	-- Timer to reset the round and then start a new one
-	timer.Simple( 5, function()
+	timer.Simple( SkyView.Config.RoundEndTime, function()
 		GAMEMODE:RoundReset()
 		GAMEMODE:RoundStart()
 	end )
