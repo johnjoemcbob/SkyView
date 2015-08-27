@@ -71,36 +71,20 @@ local PropModels =
 function ENT:Initialize()
 	-- Set up physics
 	if ( SERVER ) then
-		-- print( self:GetPos() )
-		-- print( self:IsInWorld() )
 		if ( not self:IsInWorld() ) then
-			-- print( "REMOVED IN WORLD" )
-			-- print( "REMOVED IN WORLD" )
-			-- print( "REMOVED IN WORLD" )
-			-- print( "REMOVED IN WORLD" )
-			-- print( "REMOVED IN WORLD" )
-			-- print( "REMOVED IN WORLD" )
-			-- print( "REMOVED IN WORLD" )
-			-- print( "REMOVED IN WORLD" )
-			-- print( "REMOVED IN WORLD" )
-			-- print( "REMOVED IN WORLD" )
 			self:Remove()
 			return
 		end
 
 		if ( self:GetModel() == "models/error.mdl" ) then
 			self:SetModel(table.Random(PropModels))
-			-- print( self:GetModel() )
 		end
 		self:PhysicsInit( SOLID_VPHYSICS )
-		-- print( "inited physics" )
-		--self:PhysWake()
 
 		self.RemoveTime = CurTime() + SkyView.Config.RemovePropTime
 
 		local phys = self:GetPhysicsObject()
 		if ( phys and IsValid( phys ) ) then
-			-- print( "physics is valid" )
 			phys:EnableDrag( false )
 			--phys:Wake()
 		end
@@ -128,22 +112,11 @@ end
 function ENT:Think()
 	if( SERVER ) then
 		if ( not self:IsInWorld() ) then
-			-- print( "REMOVED IN WORLD" )
-			-- print( "REMOVED IN WORLD" )
-			-- print( "REMOVED IN WORLD" )
-			-- print( "REMOVED IN WORLD" )
-			-- print( "REMOVED IN WORLD" )
-			-- print( "REMOVED IN WORLD" )
-			-- print( "REMOVED IN WORLD" )
-			-- print( "REMOVED IN WORLD" )
-			-- print( "REMOVED IN WORLD" )
-			-- print( "REMOVED IN WORLD" )
 			self:Remove()
 			return
 		end
 
 		-- Apply homing logic
-		-- print( "HOME IN" )
 		self:HomeIn()
 
 		-- Nocollide with owner if saw
@@ -162,7 +135,6 @@ function ENT:Think()
 
 		-- Tick down until removal of the prop
 		if ( CurTime() > self.RemoveTime ) then
-			-- print( "REMOVING PROP, TIMEOUT" )
 			self:StopSound("saw_travel")
 			self:Remove()
 			return
@@ -215,54 +187,10 @@ function ENT:Think()
 		end
 
 		local phys = self:GetPhysicsObject()
-		if ( phys and IsValid( phys ) ) then
-			-- print( "PHYS VALID" )
-			--phys:OutputDebugInfo()
-		else
-			-- print( "----" )
-			-- print( "----" )
-			-- print( "----" )
-			-- print( "----" )
-			-- print( "----" )
-			-- print( "----" )
-			-- print( "----" )
-			-- print( "----" )
-			-- print( "----" )
-			-- print( "----" )
-			-- print( "----" )
-			-- print( "----" )
-			-- print( "----" )
-			-- print( "----" )
-			-- print( "----" )
-			-- print( "----" )
-			-- print( "----" )
-			-- print( "----" )
-			-- print( "----" )
-			-- print( "----" )
-			-- print( "----" )
-			-- print( "----" )
-			-- print( "----" )
-			-- print( "----" )
-			-- print( "----" )
-			-- print( "----" )
-			-- print( "----" )
-			-- print( "----" )
-			-- print( "----" )
-			-- print( "----" )
-			-- print( "----" )
-			-- print( "----" )
-			-- print( "----" )
-			-- print( "----" )
-			-- print( "----" )
-			-- print( "----" )
-			-- print( "----" )
-			-- print( "----" )
-			-- print( "----" )
+		if ( ( not phys ) or ( not IsValid( phys ) ) ) then
 			self:Remove()
 			return
 		end
-		--debug.Trace()
-		-- print( "THINK END" )
 
 		self:NextThink( CurTime() )
 		return true
@@ -274,15 +202,6 @@ function ENT:ReflectVector( vec, normal, bounce )
 end
 
 function ENT:PhysicsCollide( colData, collider )
-	-- print( "PROP COLLISION---" )
-	PrintTable( colData )
-	-- print( collider )
-	-- print( "Valid?: "..tostring(IsValid( collider )) )
-	-- print( "Shield?: "..tostring(self.IsShield) )
-	-- print( "ActiveShield?: "..tostring(self.IsActiveShield) )
-	-- print( "Model: "..tostring(self:GetModel()) )
-	-- print( "PROP COLLISION---/end" )
-
 	if( SERVER ) then
 		-- Make em bouncy
 		local hitEnt = colData.HitEntity
@@ -336,10 +255,6 @@ function ENT:PhysicsCollide( colData, collider )
 	end
 end
 
-function ENT:OnRemove()
-
-end
-
 function ENT:HomeIn()
 	-- Make the sawmerang come back
 	if(self.IsSaw == true and self:GetPos():Distance(self:GetThrownBy():GetPos()) > 1450) then
@@ -353,12 +268,10 @@ function ENT:HomeIn()
 	end
 
 	if(self.IsHoming == false) then
-		-- print( "NOT HOMING" )
 		return
 	end
 	-- Apply force towards stored target
 	if(self.HomingTarget and IsValid(self.HomingTarget) and self.HomingTarget:Alive()) then
-		-- print( "HOMING; HUNTING TARGET" )
 		local flightVector = self.HomingTarget:GetPos() - self:GetPos()
 		flightVector:Normalize()
 		flightVector = flightVector * 2000
@@ -367,7 +280,6 @@ function ENT:HomeIn()
 			phys:SetVelocity(phys:GetVelocity() + flightVector)
 		end
 	else -- Try to find a target
-		-- print( "HOMING; FINDING TARGET" )
 		local nearbyEnts = ents.FindInSphere(self:GetPos(), 350)
 		for k, v in pairs(nearbyEnts) do
 			if(v != nil and IsValid(v) and v:IsPlayer() and v != self:GetThrownBy() and v:Alive()) then
@@ -382,20 +294,12 @@ end
 function ENT:Throw( from, velocity, owner )
 	if ( ( not self ) or ( not IsValid( self ) ) ) then return end
 
-	-- print( "throw" )
-	-- print( "from;" )
-	-- print( from )
-	-- print( "with velocity;" )
-	-- print( velocity )
-	-- print( "and owner;" )
-	-- print( owner )
 	self:SetPos( from )
 	local phys = self:GetPhysicsObject()
 	if ( phys and IsValid( phys ) ) then
 		phys:SetVelocity( velocity )
 	end
 	if( owner != nil and IsValid(owner)) then
-		-- print( "owner is valid" )
 		self:SetThrownBy(owner)
 
 		if(owner:GetBuff(2) != nil) then

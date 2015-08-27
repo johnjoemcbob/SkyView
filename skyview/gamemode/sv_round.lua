@@ -16,8 +16,7 @@ function GM:PlayerInitialSpawn_Round( ply )
 		return
 	-- Only player on the server, reset and start
 	elseif ( ( #player.GetAll() ) <= 2 ) then
-		self:RoundReset()
-		self:RoundStart()
+		self:RoundEnd()
 		return
 	end
 
@@ -52,6 +51,8 @@ function GM:RoundStart()
 end
 
 function GM:RoundEnd()
+	if ( self.CurrentRoundState == self.RoundStates.End ) then return end
+
 	self.CurrentRoundState = self.RoundStates.End
 
 	-- Find the winner

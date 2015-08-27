@@ -11,12 +11,7 @@ GM.Sounds["round_begin"] =
 {
 	{
 		File = "skyview/announcer/go.mp3",
-		Chance = 50,
-		MinIncrement = 0
-	},
-	{
-		File = "skyview/announcer/start.mp3",
-		Chance = 50,
+		Chance = 100,
 		MinIncrement = 0
 	}
 }
@@ -24,12 +19,7 @@ GM.Sounds["round_end"] =
 {
 	{
 		File = "skyview/announcer/game_over.mp3",
-		Chance = 50,
-		MinIncrement = 0
-	},
-	{
-		File = "skyview/announcer/stop.mp3",
-		Chance = 50,
+		Chance = 100,
 		MinIncrement = 0
 	}
 }

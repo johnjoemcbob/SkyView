@@ -178,7 +178,6 @@ function GM:PlayMusic( message )
 	-- Play outro
 	elseif ( string.find( message, "wins" ) ) then
 		if ( not Sound_Music_Outro:IsPlaying() ) then
-			print( "play" )
 			self:PlayMusicTrack( Sound_Music_Outro )
 		end
 	-- Play loop

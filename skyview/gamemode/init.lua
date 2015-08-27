@@ -147,6 +147,13 @@ resource.AddFile( "sound/skyview/announcer/whiplash.mp3" )
 resource.AddFile( "sound/skyview/announcer/you_cant_grapple_air.mp3" )
 resource.AddFile( "sound/skyview/announcer/you_died.mp3" )
 
+function GM:Initialize()
+	-- Change the physics engine settings to allow for faster moving objects
+	local perf = physenv.GetPerformanceSettings()
+		perf.MaxVelocity = 500000
+	physenv.SetPerformanceSettings( perf )
+end
+
 function GM:PlayerInitialSpawn(ply)
 	-- Found in sv_stats.lua
 	self:PlayerInitialSpawn_Stats( ply )
@@ -239,9 +246,9 @@ function GM:PlayerDeath( ply, inflictor, attacker )
 
 	if( inflictor:GetClass() == "sky_physprop" ) then
 		-- Check for multikill
-		if(inflictor.PlayersKilled > 0) then
-			PrintMessage( HUD_PRINTTALK, "MULTI KILL!" )
-		end
+		-- if(inflictor.PlayersKilled > 0) then
+			-- PrintMessage( HUD_PRINTTALK, "MULTI KILL!" )
+		-- end
 
 		-- This prop has killed people
 		inflictor.PlayersKilled = inflictor.PlayersKilled + 1
@@ -260,7 +267,6 @@ function GM:KeyPress(ply, key)
 		end
 		if key == IN_ATTACK and !ply.ShieldMade and !ply.Grapple then
 			if ply.PropCD == 0 or ply.PropCD > 0 and CurTime() >= ply.PropCD then
-				print( ply:Nick().." fired prop" )
 				local prop = ents.Create("sky_physprop")
 					local pos = ply:GetPos()
 					local fireangle = ply:EyeAngles()
@@ -406,7 +412,6 @@ end
 function GM:Think_Shield( ply )
 	if ( ply:KeyDown( IN_ATTACK2 ) ) then
 		if ( not ply.ShieldMade ) then
-			print( ply:Nick().." createdshield" )
 			ply.ShieldMade = true
 
 			-- Spawn the shield

@@ -1,9 +1,8 @@
 "skyview"
 {
 	"base"		"base"
-	"title"		"SkyView"
+	"title"		"SkyView - Arcade Edition"
 	"maps"		""
 	"menusystem"	"1"
 	"workshopid"	""
-
 }

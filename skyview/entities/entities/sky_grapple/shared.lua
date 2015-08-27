@@ -23,7 +23,7 @@ ENT.GrappleAttached = false
 ENT.GrappleStartTime = 0
 
 -- The speed at which to shoot out the hook
-ENT.CastSpeed = 1500 * 500
+ENT.CastSpeed = 1500 * 10
 
 -- The speed at which to reel in the player
 ENT.ReelSpeed = 1500 * 100
@@ -254,12 +254,6 @@ function ENT:Think()
 end
 
 function ENT:PhysicsCollide( data, phys )
-	-- print( "GRAPPLE COLLISION---" )
-	PrintTable( data )
-	-- print( phys )
-	-- print( "Valid?: "..tostring(IsValid( phys )) )
-	-- print( "GRAPPLE COLLISION---/end" )
-
 	local entity
 	local hitpos = data.HitPos
 	local mattype = MAT_GRASS

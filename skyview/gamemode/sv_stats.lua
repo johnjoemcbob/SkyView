@@ -133,7 +133,6 @@ function GM:EventFired( ply, event, args )
 end
 
 function GM:EventAcquisition( ply, statname, stat )
-	print( ply:Nick().." got "..statname )
 	if ( not ply.Stats[statname] ) then
 		ply.Stats[statname] = {
 			Progress = 0,
@@ -155,7 +154,6 @@ function GM:EventAcquisition( ply, statname, stat )
 		-- Increment stat
 		ply.Stats[statname].LastIncrement = CurTime()
 		ply.Stats[statname].TotalIncrements = ply.Stats[statname].TotalIncrements + 1
-		PrintTable( ply.Stats[statname] )
 
 		-- Increment player score
 		ply:SetNWInt( "sky_score", ply:GetNWInt( "sky_score" ) + stat.Score )
