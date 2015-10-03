@@ -124,7 +124,7 @@ GM.Stats["death_suicide"] = {
 }
 GM.Stats["death_suicide_prop"] = {
 	Name = "Suicides: %i",
-	Message = "{self} couldn't dodge themselves",
+	Message = "{self} couldn't dodge their {prop}",
 	MessageType = "death",
 	Sound = "skyview/announcer/salty.mp3",
 	Score = -100,
@@ -135,19 +135,23 @@ GM.Stats["death_suicide_prop"] = {
 	OnPlayerDeath = function( self, ply, args )
 		-- If this prop wasn't grappled into themselves, and has bounced
 		if (
-			( args[1]:GetClass() == "sky_physprop" ) and
-			( ( args[1].RecentlyBounced <= 0 ) or ( args[1].TimesBounced <= 2 ) )
+			( args[1]:GetClass() == "sky_physprop" ) --and
+			--( ( args[1].RecentlyBounced <= 0 ) or ( args[1].TimesBounced <= 2 ) )
 		) then
+			-- Track the number of kills per prop model
+			local prop = GAMEMODE:TrackPropKill( args[1] )
+
 			return ply,  -- Flag to add to stat progress (within sv_stats.lua)
 			{
-				self = ply:Nick()
+				self = ply:Nick(),
+				prop = prop
 			}
 		end
 	end
 }
 GM.Stats["death_suicide_prop_grapple"] = {
 	Name = "Suicides by Hook: %i",
-	Message = "{self} reeled in a big one",
+	Message = "{self} reeled in a {prop}",
 	MessageType = "death",
 	Sound = "skyview/announcer/overzealous.mp3",
 	Score = -200,
@@ -158,16 +162,20 @@ GM.Stats["death_suicide_prop_grapple"] = {
 	OnPlayerDeath = function( self, ply, args )
 		-- If this prop was grappled into themselves
 		if ( args[1].LastGrappledBy == ply ) then
+			-- Get the name of the prop used to kill
+			local prop = GAMEMODE:TrackPropKill( args[1], true )
+
 			return ply,  -- Flag to add to stat progress (within sv_stats.lua)
 			{
-				self = ply:Nick()
+				self = ply:Nick(),
+				prop = prop
 			}
 		end
 	end
 }
 GM.Stats["death_suicide_bounce"] = {
 	Name = "Rebound Suicides: %i",
-	Message = "{self} hit themselves on the rebound",
+	Message = "{self} hit themselves with a {prop} on the rebound",
 	MessageType = "death",
 	Sound = "skyview/announcer/rebound.mp3",
 	Score = -100,
@@ -182,9 +190,13 @@ GM.Stats["death_suicide_bounce"] = {
 			( args[1].LastGrappledBy ~= ply ) and
 			( ( args[1].RecentlyBounced > 0 ) and ( args[1].TimesBounced > 2 ) )
 		) then
+			-- Track the number of kills per prop model
+			local prop = GAMEMODE:TrackPropKill( args[1] )
+
 			return ply,  -- Flag to add to stat progress (within sv_stats.lua)
 			{
-				self = ply:Nick()
+				self = ply:Nick(),
+				prop = prop
 			}
 		end
 	end
@@ -252,7 +264,7 @@ GM.Stats["kill"] = {
 }
 GM.Stats["kill_prop"] = {
 	Name = "Prop Kills: %i",
-	Message = "{self} prop killed {victim}",
+	Message = "{self} prop killed {victim} with a {prop}",
 	MessageType = "kill",
 	Sound = "skyview/announcer/prop_kill.mp3",
 	Score = 150,
@@ -263,10 +275,14 @@ GM.Stats["kill_prop"] = {
 	OnPlayerKilled = function( self, ply, args )
 		-- Killed them with a prop
 		if ( ( ply ~= args[2] ) and ( ply:GetClass() == "player" ) and ( args[1]:GetClass() == "sky_physprop" ) and ( not args[1].IsShield ) ) then
+			-- Track the number of kills per prop model
+			local prop = GAMEMODE:TrackPropKill( args[1] )
+
 			return ply,  -- Flag to add to stat progress (within sv_stats.lua)
 			{
 				self = ply:Nick(),
-				victim = args[2]:Nick()
+				victim = args[2]:Nick(),
+				prop = prop
 			}
 		end
 	end

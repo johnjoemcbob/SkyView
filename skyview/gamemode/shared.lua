@@ -6,6 +6,32 @@ GM.Website = "N/A"
 include( "sh_stats.lua" )
 include( "sh_sound.lua" )
 
+-- Fire-able props
+GM.PropDescriptions =
+{
+	["models/props_c17/FurnitureBathtub001a.mdl"] = { 1, "Bath" },
+	["models/props_borealis/bluebarrel001.mdl"] = { 2, "Barrel" },
+	["models/props_c17/furnitureStove001a.mdl"] = { 3, "Stove" },
+	["models/props_c17/FurnitureFridge001a.mdl"] = { 4, "Fridge" },
+	["models/props_c17/oildrum001.mdl"] = { 1, "Barrel" },
+	["models/props_c17/oildrum001_explosive.mdl"] = { 1, "Barrel" },
+	["models/props_junk/PlasticCrate01a.mdl"] = { 1, "Crate" },
+	["models/props_c17/FurnitureSink001a.mdl"] = { 1, "Sink" },
+	["models/props_c17/FurnitureCouch001a.mdl"] = { 1, "Couch" },
+	["models/Combine_Helicopter/helicopter_bomb01.mdl"] = { 1, "Bomb" },
+	["models/props_combine/breenglobe.mdl"] = { 1, "Globe" },
+	["models/props_combine/breenchair.mdl"] = { 1, "Chair" },
+	["models/props_docks/dock01_cleat01a.mdl"] = { 1, "Cleate" },
+	["models/props_interiors/VendingMachineSoda01a.mdl"] = { 1, "Vending Machine" },
+	["models/props_interiors/Furniture_Couch01a.mdl"] = { 1, "Couch" },
+	["models/props_junk/plasticbucket001a.mdl"] = { 1, "Bucket" },
+	["models/props_lab/filecabinet02.mdl"] = { 1, "File Cabinet" },
+	["models/props_trainstation/trashcan_indoor001a.mdl"] = { 1, "Bin" },
+	["models/props_vehicles/apc_tire001.mdl"] = { 1, "Tire" },
+	["models/props_wasteland/light_spotlight01_lamp.mdl"] = { 1, "Spotlight" },
+	["models/props_junk/TrafficCone001a.mdl"] = { 1, "Cone" }
+}
+
 GM.PlayerColours = {
 	Color( 255, 0, 0 ),
 	Color( 255, 255, 0 ),

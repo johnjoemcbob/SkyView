@@ -240,6 +240,18 @@ function GM:EventSelectSound( stat, soundfile )
 	end
 end
 
+function GM:TrackPropKill( prop, donttrack )
+	-- Prop types
+	for model, info in pairs( self.PropDescriptions ) do
+		if ( prop:GetModel() == string.lower( model ) ) then
+			if ( not donttrack ) then
+				
+			end
+			return info[2]
+		end
+	end
+end
+
 hook.Add( "PlayerDeath", "SKY_STAT_PlayerDeath", function( ply, inflictor, attacker )
 	-- Custom logic for if the inflictor was a prop, and who it was thrown by
 	if ( inflictor:GetClass() == "sky_physprop" ) then

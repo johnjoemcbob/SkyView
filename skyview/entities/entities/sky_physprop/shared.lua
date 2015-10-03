@@ -42,32 +42,6 @@ sound.Add( {
 	sound = "ambient/machines/spin_loop.wav"
 } )
 
--- Prop Models Table
-local PropModels =
-{
-	"models/props_c17/FurnitureBathtub001a.mdl",
-	"models/props_borealis/bluebarrel001.mdl",
-	"models/props_c17/furnitureStove001a.mdl",
-	"models/props_c17/FurnitureFridge001a.mdl",
-	"models/props_c17/oildrum001.mdl",
-	"models/props_c17/oildrum001_explosive.mdl",
-	"models/props_junk/PlasticCrate01a.mdl",
-	"models/props_c17/FurnitureSink001a.mdl",
-	"models/props_c17/FurnitureCouch001a.mdl",
-	"models/Combine_Helicopter/helicopter_bomb01.mdl",
-	"models/props_combine/breenglobe.mdl",
-	"models/props_combine/breenchair.mdl",
-	"models/props_docks/dock01_cleat01a.mdl",
-	"models/props_interiors/VendingMachineSoda01a.mdl",
-	"models/props_interiors/Furniture_Couch01a.mdl",
-	"models/props_junk/plasticbucket001a.mdl",
-	"models/props_lab/filecabinet02.mdl",
-	"models/props_trainstation/trashcan_indoor001a.mdl",
-	"models/props_vehicles/apc_tire001.mdl",
-	"models/props_wasteland/light_spotlight01_lamp.mdl",
-	"models/props_junk/TrafficCone001a.mdl"
-}
-
 function ENT:Initialize()
 	-- Set up physics
 	if ( SERVER ) then
@@ -77,7 +51,20 @@ function ENT:Initialize()
 		end
 
 		if ( self:GetModel() == "models/error.mdl" ) then
-			self:SetModel(table.Random(PropModels))
+			-- The model name is the key; find a random one
+			local count = 0
+				for model, v in pairs( gmod.GetGamemode().PropDescriptions ) do
+					count = count + 1
+				end
+			local randmodel = math.random( 1, count )
+			local currentmodel = 1
+			for model, v in pairs( gmod.GetGamemode().PropDescriptions ) do
+				if ( randmodel == currentmodel ) then
+					self:SetModel( model )
+					break
+				end
+				currentmodel = currentmodel + 1
+			end
 		end
 		self:PhysicsInit( SOLID_VPHYSICS )
 

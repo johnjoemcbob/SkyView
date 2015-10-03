@@ -260,7 +260,7 @@ function GM:KeyPress(ply, key)
 		end
 		if key == IN_ATTACK and !ply.ShieldMade and !ply.Grapple then
 			if ply.PropCD == 0 or ply.PropCD > 0 and CurTime() >= ply.PropCD then
-				local prop = ents.Create("sky_physprop")
+				local prop = ents.Create( "sky_physprop" )
 					local pos = ply:GetPos()
 					local fireangle = ply:EyeAngles()
 						-- If the player is on the ground they cannot fire downwards, or they will harm themselves
@@ -280,14 +280,13 @@ function GM:KeyPress(ply, key)
 					prop:SetPos( throwPos )
 					prop:SetAngles( fireangle )
 
-          -- SAWMERANG
-          if(ply:GetBuff(3) != nil) then
-            prop:SetModel("models/props_junk/sawblade001a.mdl")
-            prop:SetModelScale(2)
-            prop:SetColor(Color( 80, 255, 255, 200 ))
-            prop:SetMaterial("models/debug/debugwhite")
-          end
-
+					-- SAWMERANG
+					if ( ply:GetBuff( 3 ) != nil ) then
+						prop:SetModel("models/props_junk/sawblade001a.mdl")
+						prop:SetModelScale(2)
+						prop:SetColor(Color( 80, 255, 255, 200 ))
+						prop:SetMaterial("models/debug/debugwhite")
+					end
 				prop:Spawn()
 
 				-- Throw the prop, setting its owner
