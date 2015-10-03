@@ -147,13 +147,6 @@ resource.AddFile( "sound/skyview/announcer/whiplash.mp3" )
 resource.AddFile( "sound/skyview/announcer/you_cant_grapple_air.mp3" )
 resource.AddFile( "sound/skyview/announcer/you_died.mp3" )
 
-function GM:Initialize()
-	-- Change the physics engine settings to allow for faster moving objects
-	local perf = physenv.GetPerformanceSettings()
-		perf.MaxVelocity = 500000
-	physenv.SetPerformanceSettings( perf )
-end
-
 function GM:PlayerInitialSpawn(ply)
 	-- Found in sv_stats.lua
 	self:PlayerInitialSpawn_Stats( ply )

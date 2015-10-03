@@ -451,6 +451,36 @@ GM.Stats["grapple_retracted"] = {
 		}
 	end
 }
+GM.Stats["grapple_reversal"] = {
+	Name = "Grapple Direction Reversal: %i",
+	Message = "grapple REVERSAL",
+	Sound = "vo/Breencast/br_collaboration02.wav",
+	Score = 0,
+	ProgressIncrement = 1, -- The amount to increment each time this stat tracks
+	ProgressMax = 1, -- The amount of progress required before it is counted as achieved on the player and progress is reset
+	Prerequisite = nil,
+	PrerequisiteTime = 0,
+	OnGrappleHookAttached = function( self, ply, args )
+		-- Store the direction of travel when travelling (a little afterwards so that the player has started moving)
+		timer.Simple( 0.3, function()
+			ply.GrappleVelocity = ply:GetVelocity()
+		end )
+	end,
+	OnPlayerGrappleJump = function( self, ply, args )
+		-- Compare the new direction of travel to the attached velocity
+		-- (dot product used to calculate the difference in direction; see http://blog.wolfire.com/2009/07/linear-algebra-for-game-developers-part-2/)
+		local old = ply.GrappleVelocity:GetNormalized()
+		local new = ply:GetVelocity():GetNormalized()
+		local dot = old:Dot( new )
+		-- If the direction of travel is now almost opposite, it has reversed
+		if ( dot < -0.5 ) then
+			return ply,  -- Flag to add to stat progress (within sv_stats.lua)
+			{
+				self = ply:Nick()
+			}
+		end
+	end
+}
 GM.Stats["jump"] = {
 	Name = "Jumps: %i",
 	--Message = "jumped",

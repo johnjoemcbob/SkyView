@@ -98,7 +98,10 @@ function ENT:Initialize()
 	self.HomingTarget = false
 	self.IsSaw = false
 
-	-- print( "end init" )
+	-- Change the physics engine settings to allow for faster moving objects
+	local perf = physenv.GetPerformanceSettings()
+		perf.MaxVelocity = 500000
+	physenv.SetPerformanceSettings( perf )
 end
 
 function ENT:SetupDataTables()

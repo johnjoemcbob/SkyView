@@ -35,9 +35,6 @@ local myView = 90
 local LastDisplayedScore = 0
 local ScoreShake = 0
 
-local Sound_Music_Intro
-local Sound_Music_Loop
-local Sound_Music_Outro
 local LastMusicStartTime = CurTime() + 100
 
 net.Receive("skyview_firstplayerscreen", function(ply)
@@ -162,9 +159,10 @@ hook.Add( "PreDrawHalos", "SKY_PreDrawHalos", function()
 end )
 
 function GM:InitPostEntity()
-	Sound_Music_Intro = CreateSound( LocalPlayer(), "skyview/music/intro.mp3" )
-	Sound_Music_Loop = CreateSound( LocalPlayer(), "skyview/music/loop.mp3" )
-	Sound_Music_Outro = CreateSound( LocalPlayer(), "skyview/music/outro.mp3" )
+	-- Store on the player so that it doesn't fail on hot reload
+	LocalPlayer().Sound_Music_Intro = CreateSound( LocalPlayer(), "skyview/music/intro.mp3" )
+	LocalPlayer().Sound_Music_Loop = CreateSound( LocalPlayer(), "skyview/music/loop.mp3" )
+	LocalPlayer().Sound_Music_Outro = CreateSound( LocalPlayer(), "skyview/music/outro.mp3" )
 end
 
 function GM:PlayMusic( message )
@@ -172,13 +170,13 @@ function GM:PlayMusic( message )
 
 	-- Play intro
 	if ( string.find( message, "begin" ) ) then
-		if ( not Sound_Music_Intro:IsPlaying() ) then
-			self:PlayMusicTrack( Sound_Music_Intro )
+		if ( not LocalPlayer().Sound_Music_Intro:IsPlaying() ) then
+			self:PlayMusicTrack( LocalPlayer().Sound_Music_Intro )
 		end
 	-- Play outro
 	elseif ( string.find( message, "wins" ) ) then
-		if ( not Sound_Music_Outro:IsPlaying() ) then
-			self:PlayMusicTrack( Sound_Music_Outro )
+		if ( not LocalPlayer().Sound_Music_Outro:IsPlaying() ) then
+			self:PlayMusicTrack( LocalPlayer().Sound_Music_Outro )
 		end
 	-- Play loop
 	else
@@ -187,21 +185,21 @@ function GM:PlayMusic( message )
 		-- OR Time for the loop to loop
 		if (
 			(
-				( not Sound_Music_Intro:IsPlaying() ) and
-				( not Sound_Music_Loop:IsPlaying() )
+				( not LocalPlayer().Sound_Music_Intro:IsPlaying() ) and
+				( not LocalPlayer().Sound_Music_Loop:IsPlaying() )
 			) or
 			( CurTime() >= ( LastMusicStartTime + self:GetCurrentMusicTrackLength() ) )
 		) then
-			self:PlayMusicTrack( Sound_Music_Loop )
+			self:PlayMusicTrack( LocalPlayer().Sound_Music_Loop )
 		end
 	end
 end
 
 function GM:PlayMusicTrack( track )
 	-- Stop all tracks
-	Sound_Music_Intro:Stop()
-	Sound_Music_Loop:Stop()
-	Sound_Music_Outro:Stop()
+	LocalPlayer().Sound_Music_Intro:Stop()
+	LocalPlayer().Sound_Music_Loop:Stop()
+	LocalPlayer().Sound_Music_Outro:Stop()
 
 	-- Play the required track, and store the time started for switching to the next track/looping
 	track:Play()
@@ -210,10 +208,10 @@ end
 
 function GM:GetCurrentMusicTrackLength()
 	-- Intro
-	if ( Sound_Music_Intro:IsPlaying() ) then
+	if ( LocalPlayer().Sound_Music_Intro:IsPlaying() ) then
 		return 22
 	-- Loop
-	elseif ( Sound_Music_Loop:IsPlaying() ) then
+	elseif ( LocalPlayer().Sound_Music_Loop:IsPlaying() ) then
 		return 46.3
 	-- Outro
 	else
@@ -262,6 +260,16 @@ function GM:HUDPaint()
 	width, height = surface.GetTextSize( textspectatee )
 	y = ScrH() / 12 * 10
 	draw.TextRotated( textspectatee, x, y - ( height / 2 ), Color( 255, 255, 255 ), font, 0 )
+
+	local timelerp = math.Clamp( math.sin( CurTime() ), 0, 0.5 )
+	local timelerp2 = math.Clamp( math.sin( CurTime() ) + 0.25, 0, 0.5 )
+	local timelerp3 = math.Clamp( math.sin( CurTime() ) + 0.5, 0, 0.5 )
+	surface.SetDrawColor( Color( 255, 0, 0, 255 * ( timelerp + 0.5 ) ) )
+	draw.CircleSegment( ScrW() / 2, ScrH() / 2, 100 * timelerp, 20, 20 * timelerp, 10, 40 )
+	surface.SetDrawColor( Color( 0, 255, 0, 255 * ( timelerp2 + 0.5 ) ) )
+	draw.CircleSegment( ScrW() / 2, ScrH() / 2, 100 * timelerp2, 20, 20 * timelerp2, 50, 40 )
+	surface.SetDrawColor( Color( 0, 0, 255, 255 * ( timelerp3 + 0.5 ) ) )
+	draw.CircleSegment( ScrW() / 2, ScrH() / 2, 100 * timelerp3, 20, 20 * timelerp3, 90, 20 )
 end
 
 function GM:RenderScreenspaceEffects()
@@ -277,6 +285,86 @@ function GM:RenderScreenspaceEffects()
 	tab[ "$pp_colour_mulb" ] = 1 
 	DrawColorModify(tab)
 end 
+
+-- From http://wiki.garrysmod.com/page/surface/DrawPoly
+function draw.Circle( x, y, radius, seg )
+	local cir = {}
+
+	table.insert( cir, { x = x, y = y, u = 0.5, v = 0.5 } )
+	for i = 0, seg do
+		local a = math.rad( ( i / seg ) * -360 )
+		table.insert( cir, { x = x + math.sin( a ) * radius, y = y + math.cos( a ) * radius, u = math.sin( a ) / 2 + 0.5, v = math.cos( a ) / 2 + 0.5 } )
+	end
+
+	local a = math.rad( 0 ) -- This is need for non absolute segment counts
+	table.insert( cir, { x = x + math.sin( a ) * radius, y = y + math.cos( a ) * radius, u = math.sin( a ) / 2 + 0.5, v = math.cos( a ) / 2 + 0.5 } )
+
+	surface.DrawPoly( cir )
+end
+
+function draw.CircleSegment( x, y, radius, seg, thickness, offset, percent )
+	if ( thickness == 0 ) then
+		return draw.Circle( x, y, radius, seg )
+	end
+
+	local minseg = seg * offset / 100
+	local maxseg = seg * ( percent + offset ) / 100
+	local numsegrow = maxseg - minseg + 1 -- Extra one each row
+
+	for currentseg = minseg, maxseg - 1 do
+		local cir = {}
+			-- 1
+			local a = math.rad( ( ( currentseg / seg ) * -360 ) )
+			table.insert( cir, {
+				x = x + math.sin( a ) * ( radius - thickness ),
+				y = y + math.cos( a ) * ( radius - thickness ),
+				u = math.sin( a ) / 2 + 0.5,
+				v = math.cos( a ) / 2 + 0.5
+			} )
+			-- 3
+			local a = math.rad( ( ( currentseg / seg ) * -360 ) )
+			table.insert( cir, {
+				x = x + math.sin( a ) * ( radius ),
+				y = y + math.cos( a ) * ( radius ),
+				u = math.sin( a ) / 2 + 0.5,
+				v = math.cos( a ) / 2 + 0.5
+			} )
+			-- 4
+			local a = math.rad( ( ( ( currentseg + 1 ) / seg ) * -360 ) )
+			table.insert( cir, {
+				x = x + math.sin( a ) * ( radius ),
+				y = y + math.cos( a ) * ( radius ),
+				u = math.sin( a ) / 2 + 0.5,
+				v = math.cos( a ) / 2 + 0.5
+			} )
+
+			-- 1
+			local a = math.rad( ( ( currentseg / seg ) * -360 ) )
+			table.insert( cir, {
+				x = x + math.sin( a ) * ( radius - thickness ),
+				y = y + math.cos( a ) * ( radius - thickness ),
+				u = math.sin( a ) / 2 + 0.5,
+				v = math.cos( a ) / 2 + 0.5
+			} )
+			-- 4
+			local a = math.rad( ( ( ( currentseg + 1 ) / seg ) * -360 ) )
+			table.insert( cir, {
+				x = x + math.sin( a ) * ( radius ),
+				y = y + math.cos( a ) * ( radius ),
+				u = math.sin( a ) / 2 + 0.5,
+				v = math.cos( a ) / 2 + 0.5
+			} )
+			-- 2
+			local a = math.rad( ( ( ( currentseg + 1 ) / seg ) * -360 ) )
+			table.insert( cir, {
+				x = x + math.sin( a ) * ( radius - thickness ),
+				y = y + math.cos( a ) * ( radius - thickness ),
+				u = math.sin( a ) / 2 + 0.5,
+				v = math.cos( a ) / 2 + 0.5
+			} )
+		surface.DrawPoly( cir )
+	end
+end
 
 -- From http://wiki.garrysmod.com/page/cam/PushModelMatrix
 function draw.TextRotated( text, x, y, color, font, ang )
