@@ -32,6 +32,12 @@ GM.PropDescriptions =
 	["models/props_junk/TrafficCone001a.mdl"] = { 1, "Cone" }
 }
 
+-- Stats to display on round end
+GM.RoundEndStats = {
+	"kill"
+}
+
+-- Player model colours
 GM.PlayerColours = {
 	Color( 255, 0, 0 ),
 	Color( 255, 255, 0 ),

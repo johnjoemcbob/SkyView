@@ -47,6 +47,13 @@ function GM:RoundStart()
 
 		-- Fire event & play round start noise
 		GAMEMODE:EventFired( ply, "RoundBegin" )
+
+		-- Reset server-wide stats
+		for k, stat in pairs( self.RoundEndStats ) do
+			for model, info in pairs( self.PropDescriptions ) do
+				info[stat] = nil
+			end
+		end
 	end
 end
 
@@ -75,6 +82,9 @@ function GM:RoundEnd()
 		-- Fire event & play round start noise
 		GAMEMODE:EventFired( ply, "RoundEnd" )
 	end
+
+	-- Send server-wide stats to each client (e.g. number of props fired by everyone)
+	self:ServerStatsBroadcastMessage()
 
 	-- Timer to reset the round and then start a new one
 	timer.Simple( SkyView.Config.RoundEndTime, function()

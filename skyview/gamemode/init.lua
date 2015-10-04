@@ -2,6 +2,7 @@ AddCSLuaFile( "cl_buff.lua" )
 AddCSLuaFile("shared.lua") --send to clients
 AddCSLuaFile("shared/sh_config.lua")
 AddCSLuaFile( "vgui_gamenotice.lua" )
+AddCSLuaFile( "cl_stats.lua" )
 AddCSLuaFile( "cl_scoreboard.lua" )
 AddCSLuaFile( "cl_deathnotice.lua" )
 AddCSLuaFile( "sh_stats.lua" )

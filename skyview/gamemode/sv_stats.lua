@@ -21,6 +21,7 @@
 -- and the total number of increments
 
 util.AddNetworkString( "PlayerAction" )
+util.AddNetworkString( "Stats_Server" )
 
 function GM:PlayerInitialSpawn_Stats( ply )
 	ply.Stats = {}
@@ -193,6 +194,13 @@ function GM:EventSendMessage( ply, statname, stat, data )
 	net.Broadcast()
 end
 
+function GM:ServerStatsBroadcastMessage()
+	-- Send to client, which will display any messages/play any sounds
+	net.Start( "Stats_Server" )
+		net.WriteTable( self.PropDescriptions )
+	net.Broadcast()
+end
+
 function GM:EventCheckPrerequisite( ply, prerequisite, retime )
 	if (
 		prerequisite and
@@ -240,12 +248,16 @@ function GM:EventSelectSound( stat, soundfile )
 	end
 end
 
-function GM:TrackPropKill( prop, donttrack )
+function GM:TrackPropKill( prop, stat, increment, donttrack )
 	-- Prop types
 	for model, info in pairs( self.PropDescriptions ) do
 		if ( prop:GetModel() == string.lower( model ) ) then
 			if ( not donttrack ) then
-				
+				-- Track stat
+				if ( self.PropDescriptions[model][stat] == nil ) then
+					self.PropDescriptions[model][stat] = 0
+				end
+				self.PropDescriptions[model][stat] = self.PropDescriptions[model][stat] + increment
 			end
 			return info[2]
 		end

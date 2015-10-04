@@ -139,7 +139,7 @@ GM.Stats["death_suicide_prop"] = {
 			--( ( args[1].RecentlyBounced <= 0 ) or ( args[1].TimesBounced <= 2 ) )
 		) then
 			-- Track the number of kills per prop model
-			local prop = GAMEMODE:TrackPropKill( args[1] )
+			local prop = GAMEMODE:TrackPropKill( args[1], "kill", 1 )
 
 			return ply,  -- Flag to add to stat progress (within sv_stats.lua)
 			{
@@ -163,7 +163,7 @@ GM.Stats["death_suicide_prop_grapple"] = {
 		-- If this prop was grappled into themselves
 		if ( args[1].LastGrappledBy == ply ) then
 			-- Get the name of the prop used to kill
-			local prop = GAMEMODE:TrackPropKill( args[1], true )
+			local prop = GAMEMODE:TrackPropKill( args[1], "kill", 1, true )
 
 			return ply,  -- Flag to add to stat progress (within sv_stats.lua)
 			{
@@ -191,7 +191,7 @@ GM.Stats["death_suicide_bounce"] = {
 			( ( args[1].RecentlyBounced > 0 ) and ( args[1].TimesBounced > 2 ) )
 		) then
 			-- Track the number of kills per prop model
-			local prop = GAMEMODE:TrackPropKill( args[1] )
+			local prop = GAMEMODE:TrackPropKill( args[1], "kill", 1 )
 
 			return ply,  -- Flag to add to stat progress (within sv_stats.lua)
 			{
@@ -276,7 +276,7 @@ GM.Stats["kill_prop"] = {
 		-- Killed them with a prop
 		if ( ( ply ~= args[2] ) and ( ply:GetClass() == "player" ) and ( args[1]:GetClass() == "sky_physprop" ) and ( not args[1].IsShield ) ) then
 			-- Track the number of kills per prop model
-			local prop = GAMEMODE:TrackPropKill( args[1] )
+			local prop = GAMEMODE:TrackPropKill( args[1], "kill", 1 )
 
 			return ply,  -- Flag to add to stat progress (within sv_stats.lua)
 			{
@@ -469,7 +469,7 @@ GM.Stats["grapple_retracted"] = {
 }
 GM.Stats["grapple_reversal"] = {
 	Name = "Grapple Direction Reversal: %i",
-	Message = "grapple REVERSAL",
+	Message = "{self} reverse grappled!",
 	Sound = "vo/Breencast/br_collaboration02.wav",
 	Score = 0,
 	ProgressIncrement = 1, -- The amount to increment each time this stat tracks
@@ -483,6 +483,8 @@ GM.Stats["grapple_reversal"] = {
 		end )
 	end,
 	OnPlayerGrappleJump = function( self, ply, args )
+		if ( ply.GrappleVelocity == nil ) then return end
+
 		-- Compare the new direction of travel to the attached velocity
 		-- (dot product used to calculate the difference in direction; see http://blog.wolfire.com/2009/07/linear-algebra-for-game-developers-part-2/)
 		local old = ply.GrappleVelocity:GetNormalized()

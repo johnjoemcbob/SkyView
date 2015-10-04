@@ -1,5 +1,6 @@
-include("shared.lua")
-include("shared/sh_config.lua")
+include( "shared.lua" )
+include( "shared/sh_config.lua" )
+include( "cl_stats.lua" )
 include( "cl_scoreboard.lua" )
 include( "cl_deathnotice.lua" )
 
@@ -35,6 +36,7 @@ local myView = 90
 local LastDisplayedScore = 0
 local ScoreShake = 0
 
+local StatPieLerpTime = 0
 local LastMusicStartTime = CurTime() + 100
 
 net.Receive("skyview_firstplayerscreen", function(ply)
@@ -206,6 +208,7 @@ function GM:PlayMusicTrack( track )
 	LastMusicStartTime = CurTime()
 end
 
+-- Professional
 function GM:GetCurrentMusicTrackLength()
 	-- Intro
 	if ( LocalPlayer().Sound_Music_Intro:IsPlaying() ) then
@@ -219,8 +222,8 @@ function GM:GetCurrentMusicTrackLength()
 	end
 end
 
-function GM:HUDShouldDraw(name)
-	if name == "CHudHealth" then 
+function GM:HUDShouldDraw( name )
+	if ( name == "CHudHealth" ) then 
 		return false 
 	end 
 	return true 
@@ -261,29 +264,63 @@ function GM:HUDPaint()
 	y = ScrH() / 12 * 10
 	draw.TextRotated( textspectatee, x, y - ( height / 2 ), Color( 255, 255, 255 ), font, 0 )
 
-	local timelerp = math.Clamp( math.sin( CurTime() ), 0, 0.5 )
-	local timelerp2 = math.Clamp( math.sin( CurTime() ) + 0.25, 0, 0.5 )
-	local timelerp3 = math.Clamp( math.sin( CurTime() ) + 0.5, 0, 0.5 )
-	surface.SetDrawColor( Color( 255, 0, 0, 255 * ( timelerp + 0.5 ) ) )
-	draw.CircleSegment( ScrW() / 2, ScrH() / 2, 100 * timelerp, 20, 20 * timelerp, 10, 40 )
-	surface.SetDrawColor( Color( 0, 255, 0, 255 * ( timelerp2 + 0.5 ) ) )
-	draw.CircleSegment( ScrW() / 2, ScrH() / 2, 100 * timelerp2, 20, 20 * timelerp2, 50, 40 )
-	surface.SetDrawColor( Color( 0, 0, 255, 255 * ( timelerp3 + 0.5 ) ) )
-	draw.CircleSegment( ScrW() / 2, ScrH() / 2, 100 * timelerp3, 20, 20 * timelerp3, 90, 20 )
+	-- Draw stats on game end
+	self:HUDPaint_Stats()
+end
+
+function GM:HUDPaint_Stats()
+	-- Only display on round end
+	local textround = LocalPlayer():GetNWString( "sky_round" )
+	if ( not string.find( textround, "Wins!" ) ) then
+		-- Reset lerp stat in timer
+		StatPieLerpTime = 0
+		return
+	end
+
+	-- Increment lerp time
+	StatPieLerpTime = StatPieLerpTime + FrameTime()
+
+	-- Display pie segments
+	-- Find the total number of each stat
+	-- Store the current segment rotation around the circle
+	-- Divide the current stat by the max stat for segment size
+	print( "-" )
+	for k, stat in pairs( self.RoundEndStats ) do
+		print( stat )
+		local totalstat = 0
+		for model, info in pairs( self.PropDescriptions ) do
+			if ( info[stat] ) then
+				print( info[2] .. " " .. tostring( info[stat] ) )
+				totalstat = totalstat + info[stat]
+				-- local timelerp = math.Clamp( StatPieLerpTime + ( 0.1 * k ), 0, 0.5 )
+				-- surface.SetDrawColor( Color( 255, 0, 0, 255 * ( timelerp + 0.5 ) ) )
+				-- draw.CircleSegment( ScrW() / 2, ScrH() / 2, 100 * timelerp, 20, 20 * timelerp, 10, 40 )
+			end
+		end
+		print( totalstat )
+	end
+	-- local timelerp2 = math.Clamp( math.sin( CurTime() ) + 0.25, 0, 0.5 )
+	-- local timelerp3 = math.Clamp( math.sin( CurTime() ) + 0.5, 0, 0.5 )
+	-- surface.SetDrawColor( Color( 255, 0, 0, 255 * ( timelerp + 0.5 ) ) )
+	-- draw.CircleSegment( ScrW() / 2, ScrH() / 2, 100 * timelerp, 20, 20 * timelerp, 10, 40 )
+	-- surface.SetDrawColor( Color( 0, 255, 0, 255 * ( timelerp2 + 0.5 ) ) )
+	-- draw.CircleSegment( ScrW() / 2, ScrH() / 2, 100 * timelerp2, 20, 20 * timelerp2, 50, 40 )
+	-- surface.SetDrawColor( Color( 0, 0, 255, 255 * ( timelerp3 + 0.5 ) ) )
+	-- draw.CircleSegment( ScrW() / 2, ScrH() / 2, 100 * timelerp3, 20, 20 * timelerp3, 90, 20 )
 end
 
 function GM:RenderScreenspaceEffects()
 	local tab = {}
-	tab[ "$pp_colour_addr" ] = 0
-	tab[ "$pp_colour_addg" ] = 0
-	tab[ "$pp_colour_addb" ] = 0
-	tab[ "$pp_colour_brightness" ] = 0
-	tab[ "$pp_colour_contrast" ] = 1
-	tab[ "$pp_colour_colour" ] = 1
-	tab[ "$pp_colour_mulr" ] = 0
-	tab[ "$pp_colour_mulg" ] = 1
-	tab[ "$pp_colour_mulb" ] = 1 
-	DrawColorModify(tab)
+		tab[ "$pp_colour_addr" ] = 0
+		tab[ "$pp_colour_addg" ] = 0
+		tab[ "$pp_colour_addb" ] = 0
+		tab[ "$pp_colour_brightness" ] = 0
+		tab[ "$pp_colour_contrast" ] = 1
+		tab[ "$pp_colour_colour" ] = 1
+		tab[ "$pp_colour_mulr" ] = 0
+		tab[ "$pp_colour_mulg" ] = 1
+		tab[ "$pp_colour_mulb" ] = 1 
+	DrawColorModify( tab )
 end 
 
 -- From http://wiki.garrysmod.com/page/surface/DrawPoly
