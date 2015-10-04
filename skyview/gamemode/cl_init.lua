@@ -38,6 +38,7 @@ local ScoreShake = 0
 
 local StatPieLerpTime = 0
 local LastMusicStartTime = CurTime() + 100
+MusicEnabled = false
 
 net.Receive("skyview_firstplayerscreen", function(ply)
 	local FirstScreenMenu = vgui.Create("DFrame")
@@ -170,29 +171,31 @@ end
 function GM:PlayMusic( message )
 	message = string.lower( message )
 
-	-- Play intro
-	if ( string.find( message, "begin" ) ) then
-		if ( not LocalPlayer().Sound_Music_Intro:IsPlaying() ) then
-			self:PlayMusicTrack( LocalPlayer().Sound_Music_Intro )
-		end
-	-- Play outro
-	elseif ( string.find( message, "wins" ) ) then
-		if ( not LocalPlayer().Sound_Music_Outro:IsPlaying() ) then
-			self:PlayMusicTrack( LocalPlayer().Sound_Music_Outro )
-		end
-	-- Play loop
-	else
-		-- Isn't still playing the intro, and
-		-- Isn't playing the loop effect
-		-- OR Time for the loop to loop
-		if (
-			(
-				( not LocalPlayer().Sound_Music_Intro:IsPlaying() ) and
-				( not LocalPlayer().Sound_Music_Loop:IsPlaying() )
-			) or
-			( CurTime() >= ( LastMusicStartTime + self:GetCurrentMusicTrackLength() ) )
-		) then
-			self:PlayMusicTrack( LocalPlayer().Sound_Music_Loop )
+	if ( MusicEnabled ) then
+		-- Play intro
+		if ( string.find( message, "begin" ) ) then
+			if ( not LocalPlayer().Sound_Music_Intro:IsPlaying() ) then
+				self:PlayMusicTrack( LocalPlayer().Sound_Music_Intro )
+			end
+		-- Play outro
+		elseif ( string.find( message, "wins" ) ) then
+			if ( not LocalPlayer().Sound_Music_Outro:IsPlaying() ) then
+				self:PlayMusicTrack( LocalPlayer().Sound_Music_Outro )
+			end
+		-- Play loop
+		else
+			-- Isn't still playing the intro, and
+			-- Isn't playing the loop effect
+			-- OR Time for the loop to loop
+			if (
+				(
+					( not LocalPlayer().Sound_Music_Intro:IsPlaying() ) and
+					( not LocalPlayer().Sound_Music_Loop:IsPlaying() )
+				) or
+				( CurTime() >= ( LastMusicStartTime + self:GetCurrentMusicTrackLength() ) )
+			) then
+				self:PlayMusicTrack( LocalPlayer().Sound_Music_Loop )
+			end
 		end
 	end
 end
@@ -278,26 +281,40 @@ function GM:HUDPaint_Stats()
 	end
 
 	-- Increment lerp time
-	StatPieLerpTime = StatPieLerpTime + FrameTime()
+	StatPieLerpTime = StatPieLerpTime + ( FrameTime() * 0.7 )
+
+	-- Calculate once
+	-- Count the number of stats to display, to find positioning of charts
 
 	-- Display pie segments
 	-- Find the total number of each stat
 	-- Store the current segment rotation around the circle
 	-- Divide the current stat by the max stat for segment size
-	print( "-" )
+	local chartx = ScrW() / 2 --0
+	local charty = ScrH() / 2 --0
+	local chartradius = 300
+	local chartthick = 20
 	for k, stat in pairs( self.RoundEndStats ) do
-		print( stat )
+		local segmentoffset = 0
+		local seg = 0
 		local totalstat = 0
+			for model, info in pairs( self.PropDescriptions ) do
+				if ( info[stat] ) then
+					totalstat = totalstat + info[stat]
+				end
+			end
 		for model, info in pairs( self.PropDescriptions ) do
 			if ( info[stat] ) then
-				print( info[2] .. " " .. tostring( info[stat] ) )
-				totalstat = totalstat + info[stat]
-				-- local timelerp = math.Clamp( StatPieLerpTime + ( 0.1 * k ), 0, 0.5 )
-				-- surface.SetDrawColor( Color( 255, 0, 0, 255 * ( timelerp + 0.5 ) ) )
-				-- draw.CircleSegment( ScrW() / 2, ScrH() / 2, 100 * timelerp, 20, 20 * timelerp, 10, 40 )
+				local multiplier = info[stat] / totalstat
+				local segsize = 100 * multiplier
+					local timelerp = math.Clamp( StatPieLerpTime + ( 0.01 * seg ), 0, 0.5 )
+					surface.SetDrawColor( Color( 255, 0, 0, 255 * ( timelerp + 0.5 ) ) )
+					local x, y = draw.CircleSegment( chartx, charty, chartradius * timelerp, 40, chartthick * timelerp, segmentoffset, segsize * 0.99 )
+					draw.SimpleText( info[2], "Default", x, y, Color( 255, 255, 255, 255 * ( timelerp + 0.5 ) ) )
+				segmentoffset = segmentoffset + segsize
+				seg = seg + 1
 			end
 		end
-		print( totalstat )
 	end
 	-- local timelerp2 = math.Clamp( math.sin( CurTime() ) + 0.25, 0, 0.5 )
 	-- local timelerp3 = math.Clamp( math.sin( CurTime() ) + 0.5, 0, 0.5 )
@@ -321,7 +338,7 @@ function GM:RenderScreenspaceEffects()
 		tab[ "$pp_colour_mulg" ] = 1
 		tab[ "$pp_colour_mulb" ] = 1 
 	DrawColorModify( tab )
-end 
+end
 
 -- From http://wiki.garrysmod.com/page/surface/DrawPoly
 function draw.Circle( x, y, radius, seg )
@@ -401,6 +418,9 @@ function draw.CircleSegment( x, y, radius, seg, thickness, offset, percent )
 			} )
 		surface.DrawPoly( cir )
 	end
+
+	local a = math.rad( ( ( minseg / seg ) * -360 ) )
+	return ( x + math.sin( a ) * ( radius - thickness ) ), ( y + math.cos( a ) * ( radius - thickness ) )
 end
 
 -- From http://wiki.garrysmod.com/page/cam/PushModelMatrix
