@@ -32,6 +32,7 @@
 -- -	OnGrappleHookFired
 -- -	OnGrappleHookRetracted
 -- -	OnGrappleHookAttached
+-- -	OnPropFired
 -- -	OnTravelOverProp (called when the player is travelling above a prop)
 -- -	OnNearMiss (called from within sky_physprop when a player narrowly avoids it)
 -- -	OnDelayedAcquisition (called when a stat has a delayed check, normally used to see if the player dies soon after)
@@ -497,6 +498,24 @@ GM.Stats["grapple_reversal"] = {
 				self = ply:Nick()
 			}
 		end
+	end
+}
+GM.Stats["prop_fired"] = {
+	Name = "Props Fired: %i",
+	--Message = "grapple fired",
+	--Sound = "vo/Breencast/br_collaboration02.wav",
+	Score = 0,
+	ProgressIncrement = 1, -- The amount to increment each time this stat tracks
+	ProgressMax = 1, -- The amount of progress required before it is counted as achieved on the player and progress is reset
+	Prerequisite = nil,
+	PrerequisiteTime = 0,
+	OnPropFired = function( self, ply, args )
+		local prop = GAMEMODE:TrackPropKill( args[1], "thrown", 1 )
+
+		return ply,  -- Flag to add to stat progress (within sv_stats.lua)
+		{
+			self = ply:Nick()
+		}
 	end
 }
 GM.Stats["jump"] = {

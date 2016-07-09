@@ -69,7 +69,7 @@ function ENT:Initialize()
 	self:SetModel( "models/Combine_Helicopter/helicopter_bomb01.mdl" )
 	self:SetModelScale( 0.1, 0 )
 	self:SetSolid( SOLID_BBOX )
-	self:SetCustomCollisionCheck( true )
+	--self:SetCustomCollisionCheck( true )
 
 	if ( SERVER ) then
 		-- Physics enabled, gravity disabled

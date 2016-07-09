@@ -4,31 +4,38 @@ include( "cl_stats.lua" )
 include( "cl_scoreboard.lua" )
 include( "cl_deathnotice.lua" )
 
-surface.CreateFont("skyview_firstplayerfont", {
+surface.CreateFont( "skyview_firstplayerfont", {
 	font = "Droid Sans Mono",
 	size = ScreenScale(50),
 	shadow = true,
 	bold = true
 } )
 
-surface.CreateFont("skyview_firstplayerfont2", {
+surface.CreateFont( "skyview_firstplayerfont2", {
 	font = "Droid Sans Mono",
 	size = ScreenScale(15),
 	shadow = true,
 	bold = true
 } )
 
-surface.CreateFont("skyview_noticefont", {
+surface.CreateFont( "skyview_noticefont", {
 	font = "Impact",
 	size = ScreenScale(16),
 	shadow = true,
 	bold = true
 } )
 
-surface.CreateFont("skyview_scorefont", {
+surface.CreateFont( "skyview_scorefont", {
 	font = "Impact",
 	size = ScreenScale(30),
 	shadow = true,
+	bold = true
+} )
+
+surface.CreateFont( "skyview_chartfont", {
+	font = "Impact",
+	size = ScreenScale(8),
+	shadow = false,
 	bold = true
 } )
 
@@ -290,10 +297,14 @@ function GM:HUDPaint_Stats()
 	-- Find the total number of each stat
 	-- Store the current segment rotation around the circle
 	-- Divide the current stat by the max stat for segment size
-	local chartx = ScrW() / 2 --0
+	local chartoffx = ScrW() / ( #self.RoundEndStats + 1 )
+	local chartoffy = 0
+	local chartx = chartoffx --0
 	local charty = ScrH() / 2 --0
-	local chartradius = 300
-	local chartthick = 20
+	local chartradius = ScrH() / 4
+	local chartthick = chartradius / 3
+	local chartmargin = 0.1
+	local chartdetail = 150
 	for k, stat in pairs( self.RoundEndStats ) do
 		local segmentoffset = 0
 		local seg = 0
@@ -304,26 +315,51 @@ function GM:HUDPaint_Stats()
 				end
 			end
 		for model, info in pairs( self.PropDescriptions ) do
-			if ( info[stat] ) then
+			if ( info[stat] and ( info[stat] ~= 0 ) ) then
+				local statmargin = chartmargin
+					-- Don't use a margin if there is only one prop with the stat
+					if ( info[stat] == totalstat ) then
+						statmargin = 0
+					end
 				local multiplier = info[stat] / totalstat
 				local segsize = 100 * multiplier
 					local timelerp = math.Clamp( StatPieLerpTime + ( 0.01 * seg ), 0, 0.5 )
-					surface.SetDrawColor( Color( 255, 0, 0, 255 * ( timelerp + 0.5 ) ) )
-					local x, y = draw.CircleSegment( chartx, charty, chartradius * timelerp, 40, chartthick * timelerp, segmentoffset, segsize * 0.99 )
-					draw.SimpleText( info[2], "Default", x, y, Color( 255, 255, 255, 255 * ( timelerp + 0.5 ) ) )
+					-- Calculate angle by the percentage of the circumference that has been travelled (-45 for offset of segments not starting at x0 ymax)
+					local segmid = ( ( segmentoffset + ( segsize / 2 ) ) )
+					local cirmid = segmid / 100 * 360
+					local ang = cirmid
+						-- Always upright
+						if ( ( ang > 90 ) and ( ang < 270 ) ) then
+							ang = ang - 180
+						end
+					local radius = chartradius * timelerp
+					local thickness = chartthick * timelerp
+
+					-- Calculate segments and store in shapes to draw after stenciling (text needs the position from this function first)
+					local x, y, shapes = draw.CircleSegment( chartx, charty, radius, chartdetail, thickness, segmentoffset + ( statmargin / 2 ), segsize - statmargin, true )
+
+					-- Draw circle segmentl
+					render.SetStencilCompareFunction( STENCILCOMPARISONFUNCTION_EQUAL )
+					render.SetStencilPassOperation( STENCILOPERATION_REPLACE )
+					surface.SetDrawColor( Color( info[3].r, info[3].g, info[3].b, 255 * ( timelerp + 0.5 ) ) )
+					for k, cir in pairs( shapes ) do
+						surface.DrawPoly( cir )
+					end
+
+					-- Draw text
+					local offset = segmentoffset + ( statmargin / 2 )
+					local currentseg = segmid + segsize - ( statmargin / 2 )
+					local seg = chartdetail
+					local a = math.rad( ( ( currentseg / seg ) * -360 ) )
+					x = chartx + math.sin( a ) * ( radius - thickness )
+					y = charty + math.cos( a ) * ( radius - thickness )
+					draw.TextRotatedNoShadow( info[2], x, y, Color( 255, 255, 255, 255 * ( timelerp + 0.5 ) ), "skyview_chartfont", ang )
 				segmentoffset = segmentoffset + segsize
 				seg = seg + 1
 			end
 		end
+		chartx = chartx + chartoffx
 	end
-	-- local timelerp2 = math.Clamp( math.sin( CurTime() ) + 0.25, 0, 0.5 )
-	-- local timelerp3 = math.Clamp( math.sin( CurTime() ) + 0.5, 0, 0.5 )
-	-- surface.SetDrawColor( Color( 255, 0, 0, 255 * ( timelerp + 0.5 ) ) )
-	-- draw.CircleSegment( ScrW() / 2, ScrH() / 2, 100 * timelerp, 20, 20 * timelerp, 10, 40 )
-	-- surface.SetDrawColor( Color( 0, 255, 0, 255 * ( timelerp2 + 0.5 ) ) )
-	-- draw.CircleSegment( ScrW() / 2, ScrH() / 2, 100 * timelerp2, 20, 20 * timelerp2, 50, 40 )
-	-- surface.SetDrawColor( Color( 0, 0, 255, 255 * ( timelerp3 + 0.5 ) ) )
-	-- draw.CircleSegment( ScrW() / 2, ScrH() / 2, 100 * timelerp3, 20, 20 * timelerp3, 90, 20 )
 end
 
 function GM:RenderScreenspaceEffects()
@@ -356,14 +392,18 @@ function draw.Circle( x, y, radius, seg )
 	surface.DrawPoly( cir )
 end
 
-function draw.CircleSegment( x, y, radius, seg, thickness, offset, percent )
+function draw.CircleSegment( x, y, radius, seg, thickness, offset, percent, drawlater )
 	if ( thickness == 0 ) then
 		return draw.Circle( x, y, radius, seg )
 	end
 
+	local shapes = {}
+
 	local minseg = seg * offset / 100
 	local maxseg = seg * ( percent + offset ) / 100
 	local numsegrow = maxseg - minseg + 1 -- Extra one each row
+
+	local cirtotal, cirtotalx, cirtotaly = 0, 0, 0
 
 	for currentseg = minseg, maxseg - 1 do
 		local cir = {}
@@ -375,6 +415,9 @@ function draw.CircleSegment( x, y, radius, seg, thickness, offset, percent )
 				u = math.sin( a ) / 2 + 0.5,
 				v = math.cos( a ) / 2 + 0.5
 			} )
+				cirtotalx = cirtotalx + cir[#cir].x
+				cirtotaly = cirtotaly + cir[#cir].y
+				cirtotal = cirtotal + 1
 			-- 3
 			local a = math.rad( ( ( currentseg / seg ) * -360 ) )
 			table.insert( cir, {
@@ -383,6 +426,9 @@ function draw.CircleSegment( x, y, radius, seg, thickness, offset, percent )
 				u = math.sin( a ) / 2 + 0.5,
 				v = math.cos( a ) / 2 + 0.5
 			} )
+				cirtotalx = cirtotalx + cir[#cir].x
+				cirtotaly = cirtotaly + cir[#cir].y
+				cirtotal = cirtotal + 1
 			-- 4
 			local a = math.rad( ( ( ( currentseg + 1 ) / seg ) * -360 ) )
 			table.insert( cir, {
@@ -391,6 +437,9 @@ function draw.CircleSegment( x, y, radius, seg, thickness, offset, percent )
 				u = math.sin( a ) / 2 + 0.5,
 				v = math.cos( a ) / 2 + 0.5
 			} )
+				cirtotalx = cirtotalx + cir[#cir].x
+				cirtotaly = cirtotaly + cir[#cir].y
+				cirtotal = cirtotal + 1
 
 			-- 1
 			local a = math.rad( ( ( currentseg / seg ) * -360 ) )
@@ -416,11 +465,22 @@ function draw.CircleSegment( x, y, radius, seg, thickness, offset, percent )
 				u = math.sin( a ) / 2 + 0.5,
 				v = math.cos( a ) / 2 + 0.5
 			} )
-		surface.DrawPoly( cir )
+				cirtotalx = cirtotalx + cir[#cir].x
+				cirtotaly = cirtotaly + cir[#cir].y
+				cirtotal = cirtotal + 1
+		if ( not drawlater ) then
+			surface.DrawPoly( cir )
+		else
+			table.insert( shapes, cir )
+		end
 	end
 
-	local a = math.rad( ( ( minseg / seg ) * -360 ) )
-	return ( x + math.sin( a ) * ( radius - thickness ) ), ( y + math.cos( a ) * ( radius - thickness ) )
+	local centerx, centery
+		centerx = cirtotalx / cirtotal
+		centery = cirtotaly / cirtotal
+	return centerx, centery, shapes
+	-- local a = math.rad( ( ( minseg / seg ) * -360 ) )
+	-- return ( x + math.sin( a ) * ( radius - thickness ) ), ( y + math.cos( a ) * ( radius - thickness ) )
 end
 
 -- From http://wiki.garrysmod.com/page/cam/PushModelMatrix
@@ -449,6 +509,36 @@ function draw.TextRotated( text, x, y, color, font, ang )
 			},
 			2,
 			255
+		)
+	cam.PopModelMatrix()
+	render.PopFilterMag()
+	render.PopFilterMin()
+end
+
+-- From http://wiki.garrysmod.com/page/cam/PushModelMatrix
+function draw.TextRotatedNoShadow( text, x, y, color, font, ang )
+	render.PushFilterMag( TEXFILTER.ANISOTROPIC )
+	render.PushFilterMin( TEXFILTER.ANISOTROPIC )
+	surface.SetFont( font )
+	surface.SetTextColor( color )
+	surface.SetTextPos( 0, 0 )
+	local textWidth, textHeight = surface.GetTextSize( text )
+	local rad = -math.rad( ang )
+	x = x - ( math.cos( rad ) * textWidth / 2 + math.sin( rad ) * textHeight / 2 )
+	y = y + ( math.sin( rad ) * textWidth / 2 + math.cos( rad ) * textHeight / 2 )
+	local m = Matrix()
+	m:SetAngles( Angle( 0, ang, 0 ) )
+	m:SetTranslation( Vector( x, y, 0 ) )
+	cam.PushModelMatrix( m )
+		draw.Text(
+			{
+				text = text,
+				font = font,
+				pos = { 0, 0 },
+				xalign = 0,
+				yalign = 4,
+				color = color
+			}
 		)
 	cam.PopModelMatrix()
 	render.PopFilterMag()

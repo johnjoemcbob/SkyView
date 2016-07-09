@@ -219,19 +219,19 @@ function GM:PostPlayerDeath( ply )
 		ply:RemoveBuff( k )
 	end
 
-  -- Spawn a powerup! -- pick from table of powerups
-  local pickupchance = math.random(0, 100)
-  if(pickupchance > 70) then --30% chance
-    newPowerup = ents.Create(table.Random(PowerupChoices))
+	-- Spawn a powerup! -- pick from table of powerups
+	local pickupchance = math.random( 0, 100 )
+	if ( pickupchance > 70 ) then --30% chance
+		newPowerup = ents.Create( table.Random( PowerupChoices ) )
 
-    newPowerup:SetPos(ply:EyePos() + Vector(0, 0, 50))
-    newPowerup:Spawn()
-    -- Fly away, little one
-    local phys = newPowerup:GetPhysicsObject()
-    if( phys and IsValid(phys)) then
-        phys:SetVelocity(Vector( math.random(-500, 500), math.random(-500, 500), math.random(-500, 500) ))
-    end
-  end
+		newPowerup:SetPos( ply:EyePos() + Vector( 0, 0, 50 ) )
+		newPowerup:Spawn()
+		-- Fly away, little one
+		local phys = newPowerup:GetPhysicsObject()
+		if ( phys and IsValid( phys ) ) then
+			phys:SetVelocity( Vector( math.random( -500, 500 ), math.random( -500, 500 ), math.random( -500, 500 ) ) )
+		end
+	end
 end
 
 -- Death stats!
@@ -269,7 +269,7 @@ function GM:KeyPress(ply, key)
 							-- fireangle.p = math.Clamp( fireangle.p, -180, 0 )
 						-- end
 					local forward = fireangle:Forward()
-					local throwPos = ply:EyePos() + ( forward * 10 )
+					local throwPos = ply:EyePos() + ( forward * 50 )
 					local throwVelocity = nil
 
 					if SkyView.Config.FirstPerson then
@@ -283,10 +283,10 @@ function GM:KeyPress(ply, key)
 
 					-- SAWMERANG
 					if ( ply:GetBuff( 3 ) != nil ) then
-						prop:SetModel("models/props_junk/sawblade001a.mdl")
-						prop:SetModelScale(2)
-						prop:SetColor(Color( 80, 255, 255, 200 ))
-						prop:SetMaterial("models/debug/debugwhite")
+						prop:SetModel( "models/props_junk/sawblade001a.mdl" )
+						prop:SetModelScale( 2 )
+						prop:SetColor( Color( 80, 255, 255, 200 ) )
+						prop:SetMaterial( "models/debug/debugwhite" )
 					end
 				prop:Spawn()
 
@@ -295,6 +295,8 @@ function GM:KeyPress(ply, key)
 				prop:SetPropOwner(ply)
 
 				ply.PropCD = CurTime()+SkyView.Config.PropSpawnCoolDown
+
+				GAMEMODE:EventFired( ply, "PropFired", { prop } )
 			end
 		end
 	end
@@ -468,10 +470,22 @@ function AddGrapple( ply )
 	-- Create the grapple
 	ply.Grapple = true
 
+	-- Find the furthest point away from the player (up to a maximum) to create the hook
+	-- This stops it from being shot out of the world, while also firing it from without the player's body
+	local distance = 100
+	local raytrace = util.TraceLine( {
+		start = ply:EyePos(),
+		endpos = ply:EyePos() + ply:EyeAngles():Forward() * distance,
+		filter = {
+			ply
+		}
+	} )
+	distance = math.min( 100, distance * raytrace.Fraction )
+
 	-- Create the grapple hook physics object, which will fly forward of the player
 	ply.GrappleHook = ents.Create( "sky_grapple" )
-		ply.GrappleHook:SetPos( ply:EyePos() )
 		ply.GrappleHook.Direction = ply:EyeAngles():Forward()
+		ply.GrappleHook:SetPos( ply:EyePos() + ( ply.GrappleHook.Direction * distance ) )
 		ply.GrappleHook.Owner = ply
 		col = ply:GetPlayerColor()
 			col = Color( col.x * 255, col.y * 255, col.z * 255 )

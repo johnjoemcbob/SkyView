@@ -51,7 +51,7 @@ function GM:RoundStart()
 		-- Reset server-wide stats
 		for k, stat in pairs( self.RoundEndStats ) do
 			for model, info in pairs( self.PropDescriptions ) do
-				info[stat] = nil
+				self.PropDescriptions[model][stat] = 0
 			end
 		end
 	end

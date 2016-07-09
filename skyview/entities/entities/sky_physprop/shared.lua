@@ -77,7 +77,7 @@ function ENT:Initialize()
 		end
 	end
 
-	self:SetCustomCollisionCheck( true )
+	--self:SetCustomCollisionCheck( true )
 
 	self.NearPlayers = {}
 	self.CollidedPlayers = {}
